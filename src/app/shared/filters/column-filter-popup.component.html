@@ -1,0 +1,69 @@
+<dx-popup
+  [visible]="visible"
+  (visibleChange)="onPopupVisibleChange($event)"
+  [showTitle]="true"
+  [title]="column?.caption ?? ''"
+  [showCloseButton]="false"
+  [shading]="false"
+  [dragEnabled]="false"
+  [hideOnOutsideClick]="true"
+  [width]="width"
+  height="auto"
+  [position]="position"
+  [wrapperAttr]="wrapperAttr"
+>
+  <div *dxTemplate="let data of 'content'" class="column-filter">
+    <ng-container *ngIf="visible && column">
+      <app-date-range-filter
+        *ngIf="column.kind === 'date' && dateBounds"
+        class="column-filter__range"
+        [min]="dateBounds.min"
+        [max]="dateBounds.max"
+        [state]="initialState"
+        (rangeChange)="onRangeChange($event)"
+      ></app-date-range-filter>
+      <app-excel-numeric-filter
+        *ngIf="column.kind === 'number' && numberBounds"
+        class="column-filter__range"
+        [min]="numberBounds.min"
+        [max]="numberBounds.max"
+        [state]="initialState"
+        (rangeChange)="onRangeChange($event)"
+      ></app-excel-numeric-filter>
+      <div
+        *ngIf="boundsError"
+        class="column-filter__error"
+        data-testid="column-filter-bounds-error"
+      >
+        {{ boundsError }}
+      </div>
+      <app-dependent-multi-checkbox-filter
+        [field]="column.field"
+        [filter]="listFilter"
+        [selected]="initialState?.values"
+        (selectedChange)="onValuesChange($event)"
+      ></app-dependent-multi-checkbox-filter>
+      <div class="column-filter__actions">
+        <dx-button
+          data-testid="column-filter-apply"
+          text="Применить"
+          type="default"
+          stylingMode="contained"
+          (onClick)="onApply()"
+        ></dx-button>
+        <dx-button
+          data-testid="column-filter-clear"
+          text="Очистить"
+          stylingMode="outlined"
+          (onClick)="onClear()"
+        ></dx-button>
+        <dx-button
+          data-testid="column-filter-cancel"
+          text="Отмена"
+          stylingMode="text"
+          (onClick)="onCancel()"
+        ></dx-button>
+      </div>
+    </ng-container>
+  </div>
+</dx-popup>

@@ -1,0 +1,22 @@
+<dx-number-box
+  data-testid="numeric-range-from"
+  placeholder="с"
+  [value]="fromValue"
+  [min]="min"
+  [max]="model.fromMax"
+  [format]="format ?? ''"
+  [showClearButton]="true"
+  [showSpinButtons]="false"
+  (onValueChanged)="onFromChanged($event)"
+></dx-number-box>
+<dx-number-box
+  data-testid="numeric-range-to"
+  placeholder="по"
+  [value]="toValue"
+  [min]="model.toMin"
+  [max]="max"
+  [format]="format ?? ''"
+  [showClearButton]="true"
+  [showSpinButtons]="false"
+  (onValueChanged)="onToChanged($event)"
+></dx-number-box>

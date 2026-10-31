@@ -1,0 +1,72 @@
+<dx-text-box
+  class="filter-list__search"
+  data-testid="filter-list-search"
+  mode="search"
+  placeholder="Поиск"
+  valueChangeEvent="input"
+  [showClearButton]="true"
+  (valueChange)="onSearchChange($event)"
+></dx-text-box>
+
+<div class="filter-list__status">
+  <dx-check-box
+    data-testid="filter-list-select-all"
+    [value]="model.allSelected"
+    [text]="model.selectAllLabel"
+    (valueChange)="onSelectAll($event)"
+  ></dx-check-box>
+  <dx-load-indicator
+    *ngIf="loading"
+    data-testid="filter-list-loading"
+    [height]="20"
+    [width]="20"
+  ></dx-load-indicator>
+</div>
+
+<div
+  *ngIf="model.truncated"
+  class="filter-list__note"
+  data-testid="filter-list-truncated"
+>
+  {{ truncatedNote }}
+</div>
+
+<div *ngIf="error" class="filter-list__error" data-testid="filter-list-error">
+  {{ error }}
+</div>
+
+<div
+  #viewport
+  class="filter-list__viewport"
+  data-testid="filter-list-viewport"
+  [style.height.px]="viewportHeight"
+  (scroll)="onScroll($event)"
+>
+  <div
+    class="filter-list__spacer"
+    data-testid="filter-list-spacer"
+    [style.height.px]="model.items.length * rowHeight"
+  >
+    <div
+      *ngFor="let item of visibleItems; let i = index; trackBy: trackByValue"
+      class="filter-list__item"
+      data-testid="filter-list-item"
+      [style.top.px]="(firstRow + i) * rowHeight"
+      [style.height.px]="rowHeight"
+    >
+      <dx-check-box
+        data-testid="filter-list-item-check"
+        [value]="model.isSelected(item.value)"
+        [text]="item.text"
+        (valueChange)="onToggle(item.value, $event)"
+      ></dx-check-box>
+    </div>
+  </div>
+  <div
+    *ngIf="!loading && !error && model.items.length === 0"
+    class="filter-list__empty"
+    data-testid="filter-list-empty"
+  >
+    Нет значений
+  </div>
+</div>

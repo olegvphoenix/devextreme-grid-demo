@@ -1,0 +1,24 @@
+<dx-date-box
+  data-testid="date-range-from"
+  type="date"
+  placeholder="с"
+  [value]="fromValue"
+  [min]="min"
+  [max]="model.fromMax"
+  [displayFormat]="displayFormat"
+  [dateSerializationFormat]="serializationFormat"
+  [showClearButton]="true"
+  (onValueChanged)="onFromChanged($event)"
+></dx-date-box>
+<dx-date-box
+  data-testid="date-range-to"
+  type="date"
+  placeholder="по"
+  [value]="toValue"
+  [min]="model.toMin"
+  [max]="max"
+  [displayFormat]="displayFormat"
+  [dateSerializationFormat]="serializationFormat"
+  [showClearButton]="true"
+  (onValueChanged)="onToChanged($event)"
+></dx-date-box>
