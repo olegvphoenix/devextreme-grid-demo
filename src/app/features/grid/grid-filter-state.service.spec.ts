@@ -83,6 +83,21 @@ describe('GridFilterStateService', () => {
     expect(service.snapshot).not.toBe(before);
   });
 
+  it('поле не из колонок грида отбрасывается при чтении: грид не примет его в filterValue', () => {
+    storage.write('filters', {
+      plant: { values: ['Завод Юг'] },
+      unknown: { values: ['x'] },
+      labelsKey: { values: ['|а|'] },
+      labels: { values: ['срочно'], texts: { 'срочно': 'срочно' } },
+    });
+    const service = new GridFilterStateService(storage);
+    expect(service.snapshot).toEqual({
+      plant: { values: ['Завод Юг'] },
+      labels: { values: ['срочно'], texts: { 'срочно': 'срочно' } },
+    });
+    expect(latest(service).value).toEqual(service.snapshot);
+  });
+
   it('мусор в хранилище даёт пустое состояние, кривые колонки отбрасываются', () => {
     localStorage.setItem(KEY, '[1,2]');
     expect(new GridFilterStateService(storage).snapshot).toEqual({});

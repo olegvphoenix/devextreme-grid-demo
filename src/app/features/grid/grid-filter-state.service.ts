@@ -7,8 +7,11 @@ import {
   FilterValue,
   GridFilterState,
 } from '../../models/column-filter.model';
+import { GRID_COLUMNS } from './grid-columns';
 
 const STORAGE_KEY = 'filters';
+/** Грид бросает E1047 на условие по полю, которого нет среди его колонок. */
+const KNOWN_FIELDS: string[] = GRID_COLUMNS.map((column) => column.field);
 
 /**
  * Единственный источник фильтров страницы грида: грид получает их через
@@ -51,14 +54,16 @@ export class GridFilterStateService {
   }
 }
 
-/** Из хранилища берётся только то, что имеет форму состояния колонки. */
+/** Из хранилища берутся только колонки грида, и только в форме состояния колонки. */
 function readFilterState(raw: unknown): GridFilterState {
   const state: GridFilterState = {};
   if (!isRecord(raw)) {
     return state;
   }
   Object.entries(raw).forEach(([field, column]) => {
-    const parsed = readColumnState(column);
+    const parsed = KNOWN_FIELDS.includes(field)
+      ? readColumnState(column)
+      : null;
     if (parsed !== null) {
       state[field] = parsed;
     }
