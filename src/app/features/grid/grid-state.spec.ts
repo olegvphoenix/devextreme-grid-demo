@@ -69,8 +69,19 @@ describe('grid-state', () => {
       expect(limitSelectedRowKeys({ pageIndex: 1 })).toEqual({ pageIndex: 1 });
     });
 
-    it('предел — 40: фильтр грида по 7-значным ключам укладывается в 1500 символов', () => {
-      expect(MAX_RESTORED_SELECTION).toBe(40);
+    it('фильтр восстановления по предельному числу 7-значных ключей укладывается в 1500 символов DX', () => {
+      // Как SelectionFilterCreator.getExpr: [["id","=",k],"or",["id","=",k],…],
+      // грид меряет encodeURI(JSON.stringify(filter)).length против 1500.
+      const filter: unknown[] = [];
+      keys(MAX_RESTORED_SELECTION).forEach((key, index) => {
+        if (index > 0) {
+          filter.push('or');
+        }
+        filter.push(['id', '=', key]);
+      });
+      expect(encodeURI(JSON.stringify(filter)).length).toBeLessThanOrEqual(
+        1500
+      );
     });
   });
 
@@ -188,6 +199,18 @@ describe('grid-state', () => {
       const raw = JSON.parse(localStorage.getItem('dxgrid-demo:state')!);
       expect('filterValue' in raw).toBeFalse();
       expect(readGridState(storage)).toEqual(stateWith([{ dataField: 'id' }]));
+    });
+
+    it('readGridState отбрасывает выбор больше предела из старого хранилища', () => {
+      localStorage.setItem(
+        'dxgrid-demo:state',
+        JSON.stringify(
+          stateWith([], {
+            selectedRowKeys: Array.from({ length: 50 }, (_, i) => i + 1),
+          })
+        )
+      );
+      expect(readGridState(storage)).toEqual(stateWith([]));
     });
 
     it('saveGridState не сохраняет выбор больше предела', () => {

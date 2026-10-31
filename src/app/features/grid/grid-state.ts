@@ -57,9 +57,11 @@ const SELECTION_MODES: SelectionMode[] = [
  * грид догружает запросом с фильтром `or` по ключам; фильтр длиннее 1500
  * символов (`selection.maxFilterLengthInRequest`, в типах 23.2 не вынесен) он
  * заменяет запросом всего набора без фильтра — на 1 000 000 строк это 343 МБ.
- * 40 семизначных ключей укладываются в 1500 символов.
+ * Длина меряется как `encodeURI(JSON.stringify(filter))`: скобки и кавычки
+ * стоят по три символа, семизначный ключ — 40 символов, 38 ключей уже 1516.
+ * 30 ключей дают 1196 — с запасом; тест держит число под пределом.
  */
-export const MAX_RESTORED_SELECTION = 40;
+export const MAX_RESTORED_SELECTION = 30;
 
 const KEY_STATE = 'state';
 const KEY_DATASET = 'dataset';
@@ -151,7 +153,9 @@ export function savePageSettings(
 
 export function readGridState(storage: StorageService): DxGridState | null {
   const raw = storage.read<unknown>(KEY_STATE, null);
-  return isRecord(raw) ? stripVolatileState(raw as DxGridState) : null;
+  return isRecord(raw)
+    ? limitSelectedRowKeys(stripVolatileState(raw as DxGridState))
+    : null;
 }
 
 export function saveGridState(
