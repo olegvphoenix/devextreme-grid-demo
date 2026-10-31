@@ -1,0 +1,22 @@
+.app-menu {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.app-menu__item {
+  padding: 8px 12px;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 4px;
+}
+
+.app-menu__item--active {
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 500;
+}
+
+.app-content {
+  padding: 16px;
+}

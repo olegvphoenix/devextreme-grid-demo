@@ -1,0 +1,43 @@
+{
+  "name": "devextreme-grid-demo",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "ng": "cross-env NODE_OPTIONS=--openssl-legacy-provider ng",
+    "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider ng serve",
+    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider ng build",
+    "watch": "cross-env NODE_OPTIONS=--openssl-legacy-provider ng build --watch --configuration development",
+    "test": "cross-env NODE_OPTIONS=--openssl-legacy-provider ng test --watch=false --browsers=ChromeHeadlessNoSandbox",
+    "mock": "dotnet run --project server/MockServer"
+  },
+  "dependencies": {
+    "@angular/animations": "12.2.17",
+    "@angular/common": "12.2.17",
+    "@angular/compiler": "12.2.17",
+    "@angular/core": "12.2.17",
+    "@angular/forms": "12.2.17",
+    "@angular/platform-browser": "12.2.17",
+    "@angular/platform-browser-dynamic": "12.2.17",
+    "@angular/router": "12.2.17",
+    "devextreme": "23.2.15",
+    "devextreme-angular": "23.2.15",
+    "rxjs": "6.6.7",
+    "tslib": "2.3.1",
+    "zone.js": "0.11.8"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "12.2.18",
+    "@angular/cli": "12.2.18",
+    "@angular/compiler-cli": "12.2.17",
+    "@types/jasmine": "3.8.2",
+    "@types/node": "12.20.55",
+    "cross-env": "7.0.3",
+    "jasmine-core": "3.8.0",
+    "karma": "6.3.20",
+    "karma-chrome-launcher": "3.1.1",
+    "karma-coverage": "2.0.3",
+    "karma-jasmine": "4.0.2",
+    "karma-jasmine-html-reporter": "1.7.0",
+    "typescript": "4.3.5"
+  }
+}

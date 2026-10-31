@@ -1,0 +1,11 @@
+<h1>Основная страница</h1>
+<dx-data-grid [dataSource]="rows" [showBorders]="true" keyExpr="id">
+  <dxi-column dataField="id" caption="ID" dataType="number"></dxi-column>
+  <dxi-column dataField="name" caption="Название" dataType="string"></dxi-column>
+  <dxi-column
+    dataField="date"
+    caption="Дата"
+    dataType="date"
+    [format]="dateFormat"
+  ></dxi-column>
+</dx-data-grid>
