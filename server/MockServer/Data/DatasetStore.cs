@@ -10,7 +10,6 @@ public sealed class DatasetStore
 
     private readonly Dictionary<int, Lazy<ProductionRecord[]>> _datasets;
     private readonly Dictionary<int, long> _generationMs = new();
-    private readonly object _labelsLock = new();
 
     public DatasetStore(DateOnly today)
     {
@@ -41,11 +40,7 @@ public sealed class DatasetStore
         if (id < 1 || id > rows.Length || rows[id - 1].Id != id)
             throw new KeyNotFoundException($"Record {id} is not in the {size} dataset");
         var record = rows[id - 1];
-        lock (_labelsLock)
-        {
-            record.Labels = labels;
-            record.LabelsKey = ProductionRecord.ToLabelsKey(labels);
-        }
+        record.Labels = labels;
         return record;
     }
 

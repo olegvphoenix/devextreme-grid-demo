@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Diagnostics;
 using MockServer.Api;
 using MockServer.Data;
 
@@ -20,11 +22,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new DateJsonConverter()));
 builder.Services.AddSingleton(new DatasetStore(DateOnly.FromDateTime(DateTime.Now)));
+builder.Services.AddSingleton(new HeavyRequestLimiter(maxConcurrent: 2));
 
 var app = builder.Build();
 
+app.UseExceptionHandler(errors => errors.Run(async context =>
+{
+    var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+    context.Response.StatusCode = error switch
+    {
+        BadHttpRequestException bad => bad.StatusCode,
+        JsonException => StatusCodes.Status400BadRequest,
+        _ => StatusCodes.Status500InternalServerError,
+    };
+    await context.Response.WriteAsJsonAsync(new { message = error?.Message ?? "Внутренняя ошибка сервера" });
+}));
+app.UseMiddleware<DemoHeadersMiddleware>();
+
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapGet("/api/datasets", (DatasetStore store) => store.Describe());
+app.MapRows();
 
 app.Run();
 return 0;

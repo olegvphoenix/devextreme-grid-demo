@@ -1,0 +1,57 @@
+using System.Text.Json;
+using DevExtreme.AspNet.Data;
+using Microsoft.AspNetCore.Http.Json;
+using Microsoft.Extensions.Options;
+using MockServer.Data;
+
+namespace MockServer.Api;
+
+public sealed record LabelsBody(string[]? Labels);
+
+public static class RowsEndpoints
+{
+    public static void MapRows(this IEndpointRouteBuilder app)
+    {
+        app.MapPost("/api/rows/query", Query);
+        app.MapPut("/api/rows/{id:int}/labels", UpdateLabels);
+    }
+
+    private static async Task Query(
+        HttpContext context, DatasetStore store, HeavyRequestLimiter limiter, IOptions<JsonOptions> json)
+    {
+        if (!context.Request.HasFormContentType)
+            throw new BadHttpRequestException("Ожидается тело application/x-www-form-urlencoded");
+        var (dataset, options) = LoadOptionsReader.Read(await context.Request.ReadFormAsync());
+
+        IDisposable? lease = null;
+        if (options.Take <= 0 && !limiter.TryEnter(out lease))
+        {
+            context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            await context.Response.WriteAsJsonAsync(new { message = "Сервер занят: одновременно выполняется не более двух тяжёлых запросов, повторите позже" });
+            return;
+        }
+
+        using (lease)
+        {
+            var result = DataSourceLoader.Load(store.Get(dataset).AsQueryable(), options);
+            context.Response.ContentType = "application/json; charset=utf-8";
+            await JsonSerializer.SerializeAsync(
+                context.Response.Body, result, json.Value.SerializerOptions, context.RequestAborted);
+        }
+    }
+
+    private static IResult UpdateLabels(int id, string? dataset, LabelsBody body, DatasetStore store)
+    {
+        var size = LoadOptionsReader.ReadDataset(dataset);
+        if (body.Labels is null || body.Labels.Any(l => string.IsNullOrWhiteSpace(l) || l.Contains('|')))
+            throw new BadHttpRequestException("Поле labels обязательно: непустые строки без символа |");
+        try
+        {
+            return Results.Ok(store.UpdateLabels(size, id, body.Labels));
+        }
+        catch (KeyNotFoundException e)
+        {
+            return Results.NotFound(new { message = e.Message });
+        }
+    }
+}

@@ -45,7 +45,6 @@ public static class DataGenerator
                 Status = random.Next(Catalog.StatusNames.Length),
                 Operator = Catalog.Operators[random.Next(Catalog.Operators.Length)],
                 Labels = labels,
-                LabelsKey = ProductionRecord.ToLabelsKey(labels),
             };
         }
 

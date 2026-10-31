@@ -88,4 +88,14 @@ public class DatasetsApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal(new DateTime(2020, 2, 1), back.Date);
         Assert.Equal(DateTimeKind.Unspecified, back.Date.Kind);
     }
+
+    [Theory]
+    [InlineData("{\"date\":5}")]
+    [InlineData("{\"date\":\"2020-13-45\"}")]
+    [InlineData("{\"date\":\"01.02.2020\"}")]
+    public void JsonRejectsBadDatesWithJsonException(string json)
+    {
+        var options = _factory.Services.GetRequiredService<IOptions<JsonOptions>>().Value.SerializerOptions;
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ProductionRecord>(json, options));
+    }
 }
