@@ -1,0 +1,38 @@
+<dl class="metrics" data-testid="metrics-panel">
+  <div class="metrics__item">
+    <dt>Первая отрисовка, мс</dt>
+    <dd data-testid="metric-first-render">
+      {{ (metrics.firstRenderMs$ | async) ?? '—' }}
+    </dd>
+  </div>
+  <div class="metrics__item">
+    <dt>Сортировка, мс</dt>
+    <dd data-testid="metric-sort">{{ (metrics.sortMs$ | async) ?? '—' }}</dd>
+  </div>
+  <div class="metrics__item">
+    <dt>Фильтрация, мс</dt>
+    <dd data-testid="metric-filter">
+      {{ (metrics.filterMs$ | async) ?? '—' }}
+    </dd>
+  </div>
+  <div class="metrics__item">
+    <dt>FPS при прокрутке</dt>
+    <dd data-testid="metric-fps">{{ (metrics.fps$ | async) ?? '—' }}</dd>
+  </div>
+  <div class="metrics__item">
+    <dt>FPS минимальный</dt>
+    <dd data-testid="metric-min-fps">
+      {{ (metrics.minFps$ | async) ?? '—' }}
+    </dd>
+  </div>
+  <div class="metrics__item">
+    <dt>Ответ сервера, мс</dt>
+    <dd data-testid="metric-response">
+      {{ (data.responseMs$ | async) ?? '—' }}
+    </dd>
+  </div>
+  <div class="metrics__item">
+    <dt>Отменено запросов</dt>
+    <dd data-testid="metric-cancelled">{{ data.cancelled$ | async }}</dd>
+  </div>
+</dl>

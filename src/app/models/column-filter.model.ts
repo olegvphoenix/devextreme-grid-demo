@@ -1,5 +1,7 @@
 export type FilterValue = string | number;
 
+export type ColumnKind = 'string' | 'number' | 'date' | 'enum' | 'labels';
+
 export interface ColumnFilterState {
   values?: FilterValue[];
   from?: FilterValue | null;

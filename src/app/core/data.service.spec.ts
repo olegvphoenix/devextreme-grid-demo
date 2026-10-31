@@ -155,7 +155,18 @@ describe('DataService', () => {
       .flush(null, { status: 429, statusText: 'Too Many Requests' });
     expect(error instanceof ApiError).toBeTrue();
     expect(error!.status).toBe(429);
-    expect(error!.message).toContain('429');
+    expect(error!.message).toBe('Ошибка 429');
+  });
+
+  it('обрыв связи (статус 0) даёт русское сообщение без statusText', () => {
+    let error: ApiError | undefined;
+    service.query({}).subscribe({ error: (e) => (error = e) });
+    http
+      .expectOne('/api/rows/query')
+      .error(new ErrorEvent('network'), { status: 0, statusText: 'Unknown Error' });
+    expect(error instanceof ApiError).toBeTrue();
+    expect(error!.status).toBe(0);
+    expect(error!.message).toBe('Нет связи с сервером');
   });
 
   it('запрос одной колонки distinct отменяет только свой предыдущий', () => {

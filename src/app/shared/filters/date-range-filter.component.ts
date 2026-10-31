@@ -9,11 +9,9 @@ import { formatDate } from '@angular/common';
 import { ValueChangedEvent } from 'devextreme/ui/date_box';
 
 import { ColumnFilterState } from '../../models/column-filter.model';
-import { DATE_FORMAT } from '../date-format';
+import { DATE_FORMAT, DATE_SERIALIZATION_FORMAT } from '../date-format';
 import { DateRangeModel } from './date-range.model';
 import { dxEditorValue } from './dx-editor-value';
-
-export const DATE_SERIALIZATION_FORMAT = 'yyyy-MM-dd';
 
 /** Значение dx-date-box: при `dateSerializationFormat` — строка, при очистке — null. */
 export function toDateString(value: unknown): string | null {

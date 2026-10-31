@@ -1,11 +1,102 @@
 <h1>Основная страница</h1>
-<dx-data-grid [dataSource]="rows" [showBorders]="true" keyExpr="id">
-  <dxi-column dataField="id" caption="ID" dataType="number"></dxi-column>
-  <dxi-column dataField="name" caption="Название" dataType="string"></dxi-column>
-  <dxi-column
-    dataField="date"
-    caption="Дата"
-    dataType="date"
-    [format]="dateFormat"
-  ></dxi-column>
-</dx-data-grid>
+
+<section class="grid-page__toolbar" data-testid="grid-toolbar">
+  <div class="grid-page__group">
+    <span class="grid-page__label">Строк в наборе</span>
+    <dx-select-box
+      data-testid="dataset-size"
+      [items]="datasetSizes"
+      [value]="settings.dataset"
+      [displayExpr]="formatDataset"
+      [width]="140"
+      (onValueChanged)="onDatasetChange($event.value)"
+    ></dx-select-box>
+  </div>
+  <div class="grid-page__group" id="columns">
+    <span class="grid-page__label">Ширина колонок</span>
+    <dx-radio-group
+      data-testid="width-mode"
+      [items]="widthModes"
+      displayExpr="text"
+      valueExpr="value"
+      layout="horizontal"
+      [value]="settings.widthMode"
+      (onValueChanged)="onWidthModeChange($event.value)"
+    ></dx-radio-group>
+  </div>
+  <span id="selection" class="grid-page__anchor"></span>
+  <div class="grid-page__group">
+    <dx-check-box
+      data-testid="demo-delay"
+      text="Задержка ответа"
+      [value]="delayEnabled"
+      (onValueChanged)="onDelayChange($event.value)"
+    ></dx-check-box>
+    <dx-check-box
+      data-testid="demo-fail"
+      text="Ошибка сервера"
+      [value]="failEnabled"
+      (onValueChanged)="onFailChange($event.value)"
+    ></dx-check-box>
+    <dx-button
+      data-testid="reset-settings"
+      text="Сбросить настройки"
+      stylingMode="outlined"
+      (onClick)="onReset()"
+    ></dx-button>
+  </div>
+  <span id="export" class="grid-page__anchor"></span>
+</section>
+
+<div id="filters" class="grid-page__filters" data-testid="filter-chips"></div>
+
+<app-metrics-panel id="metrics"></app-metrics-panel>
+
+<div
+  *ngIf="error"
+  class="grid-page__error"
+  role="alert"
+  data-testid="grid-error"
+>
+  <span data-testid="grid-error-text">{{ error }}</span>
+  <dx-button
+    data-testid="grid-retry"
+    text="Повторить"
+    type="default"
+    stylingMode="outlined"
+    (onClick)="onRetry()"
+  ></dx-button>
+</div>
+
+<span id="templates" class="grid-page__anchor"></span>
+<span id="grouping" class="grid-page__anchor"></span>
+
+<div id="pagination" class="grid-page__grid">
+  <dx-data-grid
+    data-testid="grid"
+    [dataSource]="dataSource"
+    [columns]="columns"
+    [remoteOperations]="remoteOperations"
+    [paging]="paging"
+    [pager]="pager"
+    [scrolling]="scrolling"
+    [height]="gridHeight"
+    [showBorders]="true"
+    [rowAlternationEnabled]="true"
+    [errorRowEnabled]="false"
+    [columnFixing]="columnFixing"
+    [allowColumnReordering]="true"
+    [allowColumnResizing]="true"
+    [columnResizingMode]="columnResizingMode"
+    [columnChooser]="columnChooser"
+    [sorting]="sorting"
+    [filterPanel]="filterPanel"
+    [headerFilter]="headerFilter"
+    [filterRow]="filterRow"
+    [loadPanel]="loadPanel"
+    [stateStoring]="stateStoring"
+    [dateSerializationFormat]="dateSerializationFormat"
+    (onContentReady)="onContentReady($event)"
+    (onOptionChanged)="onOptionChanged($event)"
+  ></dx-data-grid>
+</div>

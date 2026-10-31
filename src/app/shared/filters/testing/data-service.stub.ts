@@ -1,7 +1,11 @@
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, Subscription } from 'rxjs';
 
 import { FilterExpression } from '../../../models/column-filter.model';
 import { ColumnStats, DistinctResult } from '../../../models/distinct.model';
+import {
+  GridLoadOptions,
+  GridLoadResult,
+} from '../../../models/load-options.model';
 import { ApiError } from '../../../core/api-error';
 
 export interface DistinctCall {
@@ -17,13 +21,46 @@ export interface StatsCall {
 
 /** Заглушка `DataService`: каждый вызов — свой Subject, ответ выдаётся тестом. */
 export class DataServiceStub {
+  readonly queryCalls: GridLoadOptions[] = [];
   readonly distinctCalls: DistinctCall[] = [];
   readonly statsCalls: StatsCall[] = [];
   /** Сколько прежних запросов stats ещё были подписаны в момент каждого вызова. */
   readonly statsPendingAtCall: number[] = [];
 
+  private readonly querySubjects: Subject<GridLoadResult>[] = [];
   private readonly distinctSubjects: Subject<DistinctResult>[] = [];
   private readonly statsSubjects: Subject<ColumnStats>[] = [];
+  private activeQuery: Subscription | null = null;
+
+  /** Как `inGroup` в DataService: новый запрос отписывает потребителя прежнего. */
+  query(options: GridLoadOptions): Observable<GridLoadResult> {
+    this.queryCalls.push(options);
+    const subject = new Subject<GridLoadResult>();
+    this.querySubjects.push(subject);
+    return new Observable<GridLoadResult>((subscriber) => {
+      this.activeQuery?.unsubscribe();
+      const subscription = subject.subscribe(subscriber);
+      this.activeQuery = subscription;
+      return subscription;
+    });
+  }
+
+  get lastQuery(): GridLoadOptions {
+    return this.queryCalls[this.queryCalls.length - 1];
+  }
+
+  respondQuery(
+    result: GridLoadResult,
+    index: number = this.querySubjects.length - 1
+  ): void {
+    this.querySubjects[index].next(result);
+    this.querySubjects[index].complete();
+  }
+
+  failQuery(message: string): void {
+    const subject = this.querySubjects[this.querySubjects.length - 1];
+    subject.error(new ApiError(500, message));
+  }
 
   distinct(
     field: string,

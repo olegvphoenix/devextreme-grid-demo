@@ -164,7 +164,10 @@ export class DataService {
   }
 
   private toApiError(response: HttpErrorResponse): Observable<never> {
-    const fallback = `Ошибка ${response.status}: ${response.statusText}`;
+    const fallback =
+      response.status === 0
+        ? 'Нет связи с сервером'
+        : `Ошибка ${response.status}`;
     if (response.error instanceof Blob) {
       return from(response.error.text()).pipe(
         mergeMap((text) => {

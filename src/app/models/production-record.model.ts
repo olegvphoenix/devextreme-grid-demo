@@ -1,5 +1,12 @@
 export type RecordStatus = 0 | 1 | 2 | 3;
 
+export const STATUS_NAMES: Record<RecordStatus, string> = {
+  0: 'Новый',
+  1: 'В работе',
+  2: 'Агрегирован',
+  3: 'Закрыт',
+};
+
 export interface ProductionRecord {
   id: number;
   /** Дата производства в формате yyyy-MM-dd, без времени и часового пояса. */

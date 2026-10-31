@@ -1,0 +1,44 @@
+.grid-page__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+.grid-page__group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.grid-page__label {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.grid-page__anchor {
+  display: block;
+  width: 0;
+  height: 0;
+}
+
+.grid-page__filters:empty {
+  display: none;
+}
+
+.grid-page__error {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  background: #fdecea;
+  color: #b71c1c;
+}
+
+.grid-page__grid {
+  min-height: 300px;
+}

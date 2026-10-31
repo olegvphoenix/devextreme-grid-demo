@@ -14,6 +14,7 @@ import { Subscription } from 'rxjs';
 import { DataService } from '../../core/data.service';
 import {
   ColumnFilterState,
+  ColumnKind,
   FilterExpression,
   FilterValue,
   GridFilterState,
@@ -25,7 +26,7 @@ import {
   isColumnFilterActive,
 } from './filter-expression';
 
-export type ColumnKind = 'string' | 'number' | 'date' | 'enum' | 'labels';
+export { ColumnKind };
 
 export interface FilterColumn {
   field: string;
