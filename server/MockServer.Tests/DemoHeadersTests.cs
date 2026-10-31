@@ -42,13 +42,22 @@ public class DemoHeadersTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task DemoDelayHoldsTheResponse()
     {
+        await _client.GetAsync("/api/datasets");
+        var baseline = await Time(() => _client.GetAsync("/api/datasets"));
+
         _client.DefaultRequestHeaders.Add("X-Demo-Delay", "200");
+        var delayed = await Time(() => _client.GetAsync("/api/datasets"));
+
+        Assert.True(delayed >= 200, $"delayed request answered after {delayed} ms");
+        Assert.True(delayed - baseline >= 150, $"baseline {baseline} ms, with X-Demo-Delay {delayed} ms");
+    }
+
+    private static async Task<long> Time(Func<Task<HttpResponseMessage>> request)
+    {
         var sw = Stopwatch.StartNew();
-
-        var response = await _client.GetAsync("/api/datasets");
-
+        var response = await request();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.True(sw.ElapsedMilliseconds >= 200, $"answered after {sw.ElapsedMilliseconds} ms");
+        return sw.ElapsedMilliseconds;
     }
 
     [Fact]
