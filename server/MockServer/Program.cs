@@ -42,6 +42,7 @@ app.UseMiddleware<DemoHeadersMiddleware>();
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapGet("/api/datasets", (DatasetStore store) => store.Describe());
 app.MapRows();
+app.MapColumns();
 
 app.Run();
 return 0;

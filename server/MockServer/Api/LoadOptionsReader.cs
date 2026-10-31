@@ -6,12 +6,18 @@ namespace MockServer.Api;
 
 public static class LoadOptionsReader
 {
-    public static (int Dataset, DataSourceLoadOptionsBase Options) Read(IFormCollection form)
+    public static Task<IFormCollection> ReadForm(HttpRequest request)
     {
-        var options = new DataSourceLoadOptionsBase { StringToLower = true };
-        DataSourceLoadOptionsParser.Parse(options, key => form[key]);
-        return (ReadDataset(form["dataset"]), options);
+        if (!request.HasFormContentType)
+            throw new BadHttpRequestException("Ожидается тело application/x-www-form-urlencoded");
+        return request.ReadFormAsync();
     }
+
+    public static (int Dataset, DataSourceLoadOptionsBase Options) Read(IFormCollection form) =>
+        Read(form, key => form[key]);
+
+    public static (int Dataset, DataSourceLoadOptionsBase Options) ReadFilterOnly(IFormCollection form) =>
+        Read(form, key => key == "filter" ? (string?)form[key] : null);
 
     public static int ReadDataset(string? value)
     {
@@ -19,5 +25,12 @@ public static class LoadOptionsReader
             return size;
         throw new BadHttpRequestException(
             $"Параметр dataset обязателен и принимает значения {string.Join(", ", DatasetStore.Sizes)}");
+    }
+
+    private static (int Dataset, DataSourceLoadOptionsBase Options) Read(IFormCollection form, Func<string, string?> value)
+    {
+        var options = new DataSourceLoadOptionsBase { StringToLower = true };
+        DataSourceLoadOptionsParser.Parse(options, value);
+        return (ReadDataset(form["dataset"]), options);
     }
 }

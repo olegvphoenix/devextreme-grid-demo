@@ -19,9 +19,7 @@ public static class RowsEndpoints
     private static async Task Query(
         HttpContext context, DatasetStore store, HeavyRequestLimiter limiter, IOptions<JsonOptions> json)
     {
-        if (!context.Request.HasFormContentType)
-            throw new BadHttpRequestException("Ожидается тело application/x-www-form-urlencoded");
-        var (dataset, options) = LoadOptionsReader.Read(await context.Request.ReadFormAsync());
+        var (dataset, options) = LoadOptionsReader.Read(await LoadOptionsReader.ReadForm(context.Request));
 
         IDisposable? lease = null;
         if (options.Take <= 0 && !limiter.TryEnter(out lease))
