@@ -145,10 +145,14 @@ export class DependentMultiCheckboxFilterComponent
       .distinct(this.field, this.filter, this.search || undefined)
       .subscribe({
         next: (result) => {
+          const before = this.model.toValues();
           this.model.applyResponse(requestId, result);
           result.items.forEach((item) => this.texts.set(item.value, item.text));
           this.loading = false;
           this.scrollToTop();
+          if (!sameValues(before, this.model.toValues())) {
+            this.selectedChange.emit(this.model.toValues());
+          }
         },
         error: (e: Error) => {
           this.loading = false;
@@ -164,4 +168,15 @@ export class DependentMultiCheckboxFilterComponent
       this.viewport.nativeElement.scrollTop = 0;
     }
   }
+}
+
+/** Полный ответ отбрасывает выбранные значения, которых в нём нет: выбор мог измениться без клика. */
+function sameValues(
+  a: FilterValue[] | undefined,
+  b: FilterValue[] | undefined
+): boolean {
+  if (a === undefined || b === undefined) {
+    return a === b;
+  }
+  return a.length === b.length && a.every((value, i) => value === b[i]);
 }

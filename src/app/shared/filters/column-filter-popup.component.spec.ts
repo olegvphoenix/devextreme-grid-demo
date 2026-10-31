@@ -159,6 +159,53 @@ describe('ColumnFilterPopupComponent', () => {
     expect(host.visible).toBeFalse();
   });
 
+  it('Применить выдаёт то, что показывают чекбоксы после перезагрузки списка', () => {
+    open();
+    data.respondStats({ min: 1, max: 100, count: 5 });
+    fixture.detectChanges();
+    data.respondDistinct(items([10.5, '10,5'], [20, '20']));
+    fixture.detectChanges();
+    itemCheck(0).instance.option('value', true);
+    fixture.detectChanges();
+    itemCheck(1).instance.option('value', true);
+    fixture.detectChanges();
+    numericFrom().instance.option('value', 10);
+    fixture.detectChanges();
+    data.respondDistinct(items([20, '20'], [30, '30']));
+    fixture.detectChanges();
+    expect(itemCheck(0).instance.option('value')).toBeTrue();
+    expect(itemCheck(1).instance.option('value')).toBeFalse();
+    press('column-filter-apply');
+    expect(host.applied).toEqual([
+      {
+        field: 'netWeight',
+        value: { values: [20], from: 10, texts: { '20': '20' } },
+      },
+    ]);
+  });
+
+  it('сохранённые значения, которых больше нет в списке, не применяются', () => {
+    host.state = { ...host.state, netWeight: { values: [10.5, 99] } };
+    open();
+    data.respondStats({ min: 1, max: 100, count: 5 });
+    fixture.detectChanges();
+    data.respondDistinct(items([10.5, '10,5'], [20, '20']));
+    fixture.detectChanges();
+    press('column-filter-apply');
+    expect(host.applied).toEqual([
+      { field: 'netWeight', value: { values: [10.5], texts: { '10.5': '10,5' } } },
+    ]);
+  });
+
+  it('новый запрос stats подписывается раньше отмены предыдущего', () => {
+    open({ kind: 'number' });
+    open({ field: 'date', caption: 'Дата', kind: 'date' });
+    expect(data.statsCalls.length).toBe(2);
+    expect(data.statsPendingAtCall).toEqual([0, 1]);
+    expect(data.isStatsPending(0)).toBeFalse();
+    expect(data.isStatsPending(1)).toBeTrue();
+  });
+
   it('Очистить выдаёт null', () => {
     open();
     press('column-filter-clear');

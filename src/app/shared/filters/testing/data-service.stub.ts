@@ -19,6 +19,8 @@ export interface StatsCall {
 export class DataServiceStub {
   readonly distinctCalls: DistinctCall[] = [];
   readonly statsCalls: StatsCall[] = [];
+  /** Сколько прежних запросов stats ещё были подписаны в момент каждого вызова. */
+  readonly statsPendingAtCall: number[] = [];
 
   private readonly distinctSubjects: Subject<DistinctResult>[] = [];
   private readonly statsSubjects: Subject<ColumnStats>[] = [];
@@ -36,6 +38,9 @@ export class DataServiceStub {
 
   stats(field: string, filter: FilterExpression | null): Observable<ColumnStats> {
     this.statsCalls.push({ field, filter });
+    this.statsPendingAtCall.push(
+      this.statsSubjects.filter((s) => s.observers.length > 0).length
+    );
     const subject = new Subject<ColumnStats>();
     this.statsSubjects.push(subject);
     return subject.asObservable();
@@ -66,6 +71,10 @@ export class DataServiceStub {
     const subject = this.statsSubjects[this.statsSubjects.length - 1];
     subject.next(stats);
     subject.complete();
+  }
+
+  isStatsPending(index: number): boolean {
+    return this.statsSubjects[index].observers.length > 0;
   }
 
   failStats(message: string): void {

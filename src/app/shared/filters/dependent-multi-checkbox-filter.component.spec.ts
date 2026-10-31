@@ -185,6 +185,20 @@ describe('DependentMultiCheckboxFilterComponent', () => {
     expect(component().textOf('b')).toBe('B');
   });
 
+  it('значения, которых нет в полном ответе, выбывают с событием selectedChange', () => {
+    host.selected = ['a', 'b'];
+    fixture.detectChanges();
+    data.respondDistinct(items(['a', 'A'], ['c', 'C']));
+    fixture.detectChanges();
+    expect(host.emitted).toEqual([['a']]);
+    expect(component().model.isSelected('b')).toBeFalse();
+    host.filter = null;
+    fixture.detectChanges();
+    data.respondDistinct(items(['a', 'A'], ['c', 'C']));
+    fixture.detectChanges();
+    expect(host.emitted.length).toBe(1);
+  });
+
   it('ошибка сервера показывается внутри списка', () => {
     fixture.detectChanges();
     data.failDistinct('Сбой сервера');

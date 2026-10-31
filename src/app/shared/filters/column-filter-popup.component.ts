@@ -161,9 +161,10 @@ export class ColumnFilterPopupComponent implements OnChanges, OnDestroy {
     this.dateBounds = null;
     this.numberBounds = null;
     this.boundsError = null;
-    this.cancelStats();
     if (this.hasRange) {
       this.loadBounds(column);
+    } else {
+      this.cancelStats();
     }
   }
 
@@ -179,7 +180,9 @@ export class ColumnFilterPopupComponent implements OnChanges, OnDestroy {
     this.listFilter = and(this.othersFilter, own);
   }
 
+  /** Подписка до отписки от прежнего запроса: так DataService видит и считает отменённый. */
   private loadBounds(column: FilterColumn): void {
+    const previous = this.statsRequest;
     this.statsRequest = this.data
       .stats(column.field, this.othersFilter)
       .subscribe({
@@ -203,6 +206,7 @@ export class ColumnFilterPopupComponent implements OnChanges, OnDestroy {
           this.boundsError = e.message;
         },
       });
+    previous?.unsubscribe();
   }
 
   private cancelStats(): void {
