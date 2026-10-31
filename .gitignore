@@ -44,4 +44,8 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# .NET
+server/**/bin/
+server/**/obj/
+
 .superpowers/
