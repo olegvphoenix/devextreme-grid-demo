@@ -25,7 +25,7 @@ public static class RowsEndpoints
         if (options.Take <= 0 && !limiter.TryEnter(out lease))
         {
             context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-            await context.Response.WriteAsJsonAsync(new { message = "Сервер занят: одновременно выполняется не более двух тяжёлых запросов, повторите позже" });
+            await context.Response.WriteAsJsonAsync(new { message = HeavyRequestLimiter.BusyMessage });
             return;
         }
 

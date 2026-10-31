@@ -32,11 +32,17 @@ public static class ColumnEndpoints
         return Results.Ok(column.Stats(rows));
     }
 
+    internal static Column FindColumn(string? field, string parameter)
+    {
+        if (field is not null && Column.All.TryGetValue(field, out var column))
+            return column;
+        throw new BadHttpRequestException(
+            $"Параметр {parameter} обязателен и принимает значения {string.Join(", ", Column.All.Keys)}");
+    }
+
     private static (Column Column, IEnumerable<ProductionRecord> Rows) ReadColumn(IFormCollection form, DatasetStore store)
     {
-        if (!Column.All.TryGetValue(form["field"].ToString(), out var column))
-            throw new BadHttpRequestException(
-                $"Параметр field обязателен и принимает значения {string.Join(", ", Column.All.Keys)}");
+        var column = FindColumn(form["field"], "field");
         var (dataset, options) = LoadOptionsReader.ReadFilterOnly(form);
         var filtered = DataSourceLoader.Load(store.Get(dataset).AsQueryable(), options).data;
         return (column, filtered.Cast<ProductionRecord>());
@@ -49,7 +55,7 @@ public static class ColumnEndpoints
         throw new BadHttpRequestException("Параметр take должен быть положительным целым числом");
     }
 
-    private abstract class Column
+    internal abstract class Column
     {
         public static readonly IReadOnlyDictionary<string, Column> All = new Column[]
         {
@@ -73,6 +79,8 @@ public static class ColumnEndpoints
 
         public string Field { get; }
 
+        public abstract string Text(ProductionRecord row);
+
         public abstract DistinctResponse Distinct(IEnumerable<ProductionRecord> rows, string? search, int take);
 
         public abstract StatsResponse Stats(IEnumerable<ProductionRecord> rows);
@@ -81,22 +89,31 @@ public static class ColumnEndpoints
     private sealed class Column<T> : Column where T : notnull
     {
         private readonly Func<IEnumerable<ProductionRecord>, IEnumerable<T>> _values;
+        private readonly Func<ProductionRecord, object> _cell;
         private readonly IComparer<T> _order;
         private readonly bool _hasRange;
 
         public Column(string field, Func<ProductionRecord, T> value, IComparer<T> order, bool hasRange)
-            : this(field, rows => rows.Select(value), order, hasRange) { }
+            : this(field, rows => rows.Select(value), row => value(row), order, hasRange) { }
 
-        private Column(string field, Func<IEnumerable<ProductionRecord>, IEnumerable<T>> values, IComparer<T> order, bool hasRange)
+        private Column(
+            string field,
+            Func<IEnumerable<ProductionRecord>, IEnumerable<T>> values,
+            Func<ProductionRecord, object> cell,
+            IComparer<T> order,
+            bool hasRange)
             : base(field)
         {
             _values = values;
+            _cell = cell;
             _order = order;
             _hasRange = hasRange;
         }
 
         public static Column<T> List(string field, Func<ProductionRecord, IEnumerable<T>> values, IComparer<T> order) =>
-            new(field, rows => rows.SelectMany(values), order, hasRange: false);
+            new(field, rows => rows.SelectMany(values), row => string.Join(", ", values(row)), order, hasRange: false);
+
+        public override string Text(ProductionRecord row) => ValueFormatter.Text(Field, _cell(row));
 
         public override DistinctResponse Distinct(IEnumerable<ProductionRecord> rows, string? search, int take)
         {

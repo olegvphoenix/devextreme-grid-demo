@@ -2,6 +2,8 @@ namespace MockServer.Api;
 
 public sealed class HeavyRequestLimiter
 {
+    public const string BusyMessage = "Сервер занят: одновременно выполняется не более двух тяжёлых запросов, повторите позже";
+
     private readonly SemaphoreSlim _slots;
 
     public HeavyRequestLimiter(int maxConcurrent) => _slots = new SemaphoreSlim(maxConcurrent, maxConcurrent);

@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Assets\DejaVuSans.ttf" LogicalName="DejaVuSans.ttf" />
+    <InternalsVisibleTo Include="MockServer.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="DevExtreme.AspNet.Data" Version="5.1.0" />
     <PackageReference Include="MiniExcel" Version="1.46.0" />
     <PackageReference Include="PDFsharp" Version="6.2.4" />
