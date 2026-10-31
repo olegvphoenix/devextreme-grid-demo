@@ -19,13 +19,18 @@ import {
 } from 'devextreme/common/grids';
 import DataSource from 'devextreme/data/data_source';
 import {
+  CellClickEvent,
+  CellPreparedEvent,
   ContentReadyEvent,
   FilterPanel,
   OptionChangedEvent,
   Paging,
   Properties,
   Scrolling,
+  Selection,
+  SelectionChangedEvent,
 } from 'devextreme/ui/data_grid';
+import notify from 'devextreme/ui/notify';
 import { Subscription } from 'rxjs';
 
 import { ApiError } from '../../core/api-error';
@@ -39,6 +44,7 @@ import {
 } from '../../models/column-filter.model';
 import { DATASET_SIZES, DatasetSize } from '../../models/dataset.model';
 import { ProductionRecord } from '../../models/production-record.model';
+import { SelectionMode } from '../../models/selection-mode.model';
 import { DATE_SERIALIZATION_FORMAT } from '../../shared/date-format';
 import {
   ColumnFilterApply,
@@ -48,6 +54,22 @@ import {
   buildFilterExpression,
   isColumnFilterActive,
 } from '../../shared/filters/filter-expression';
+import {
+  CELL_FIELD_ATTR,
+  cellOrder,
+  CellSelection,
+  gridSelection,
+  isSelectableCell,
+  SELECTED_CELL_CLASS,
+  syncCellClasses,
+} from './cell-selection';
+import { selectionTable, toExcelText } from './clipboard-format';
+import {
+  ClipboardService,
+  hasTextSelection,
+  isCopyShortcut,
+  isEditableTarget,
+} from './clipboard.service';
 import {
   defaultScrollWidths,
   DxColumn,
@@ -75,9 +97,16 @@ import { createGridStore } from './grid-store';
 const DEMO_DELAY_MS = 1500;
 const PAGE_SIZES = [20, 50, 100, 500];
 const SORT_OPTION = /^columns\[\d+\]\.(sortOrder|sortIndex)$/;
+const NOTIFY_SUCCESS_MS = 1500;
+const NOTIFY_ERROR_MS = 3000;
 
 interface WidthModeItem {
   value: WidthMode;
+  text: string;
+}
+
+interface SelectionModeItem {
+  value: SelectionMode;
   text: string;
 }
 
@@ -93,6 +122,13 @@ export class GridComponent implements OnInit, OnDestroy {
   readonly widthModes: WidthModeItem[] = [
     { value: 'fit', text: 'По ширине страницы' },
     { value: 'scroll', text: 'С прокруткой' },
+  ];
+  readonly selectionModes: SelectionModeItem[] = [
+    { value: 'none', text: 'Отключено' },
+    { value: 'row', text: 'Строка' },
+    { value: 'multi-checkbox', text: 'Несколько строк, чекбоксы' },
+    { value: 'multi-plain', text: 'Несколько строк без чекбоксов' },
+    { value: 'cells', text: 'Ячейки' },
   ];
   readonly formatDataset = (size: DatasetSize): string =>
     size.toLocaleString('ru-RU');
@@ -135,6 +171,9 @@ export class GridComponent implements OnInit, OnDestroy {
   columns: DxColumn[] = [];
   dataSource: DataSource<ProductionRecord, number>;
   error: string | null = null;
+  selection: Selection;
+  selectedRowCount = 0;
+  readonly cells = new CellSelection();
 
   filterState: GridFilterState;
   filterValue: FilterExpression | null;
@@ -151,10 +190,12 @@ export class GridComponent implements OnInit, OnDestroy {
     private readonly storage: StorageService,
     private readonly flags: DemoFlagsService,
     private readonly metrics: GridMetricsService,
-    private readonly filters: GridFilterStateService
+    private readonly filters: GridFilterStateService,
+    private readonly clipboard: ClipboardService
   ) {
     this.metrics.markStart('first-render');
     this.settings = readPageSettings(this.storage);
+    this.selection = gridSelection(this.settings.selectionMode);
     this.filterState = this.filters.snapshot;
     this.filterValue = buildFilterExpression(this.filterState);
     this.filterSubscription = this.filters.state$.subscribe((state) => {
@@ -164,7 +205,18 @@ export class GridComponent implements OnInit, OnDestroy {
     this.dataSource = new DataSource<ProductionRecord, number>({
       store: createGridStore(this.data, (e) => this.onLoadError(e)),
     });
-    this.dataSource.on('changed', () => (this.error = null));
+    this.dataSource.on('changed', () => {
+      this.error = null;
+      this.cells.clear();
+    });
+  }
+
+  get cellsMode(): boolean {
+    return this.settings.selectionMode === 'cells';
+  }
+
+  get copyEnabled(): boolean {
+    return this.cellsMode ? this.cells.count > 0 : this.selectedRowCount > 0;
   }
 
   get columnResizingMode(): ColumnResizeMode {
@@ -230,6 +282,7 @@ export class GridComponent implements OnInit, OnDestroy {
       return;
     }
     this.metrics.markContentReady();
+    this.selectedRowCount = e.component.getSelectedRowKeys().length;
     if (this.stopFps === null) {
       this.stopFps = this.metrics.startFpsWhileScrolling(
         e.component.getScrollable().element()
@@ -277,6 +330,76 @@ export class GridComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Смена режима сбрасывает и выбор строк грида, и своё выделение ячеек. */
+  onSelectionModeChange(mode: SelectionMode): void {
+    if (mode === this.settings.selectionMode) {
+      return;
+    }
+    this.updateSettings({ selectionMode: mode });
+    this.selection = gridSelection(mode);
+    const previous = this.cells.cells;
+    this.cells.clear();
+    this.selectedRowCount = 0;
+    const instance = this.grid?.instance;
+    if (instance !== undefined) {
+      instance.clearSelection();
+      syncCellClasses(instance, previous, this.cells);
+    }
+  }
+
+  onSelectionChanged(e: SelectionChangedEvent): void {
+    this.selectedRowCount = e.selectedRowKeys.length;
+  }
+
+  onCellClick(e: CellClickEvent<ProductionRecord, number>): void {
+    if (!this.cellsMode || !isSelectableCell(e.rowType, e.column)) {
+      return;
+    }
+    const previous = this.cells.cells;
+    const mods = {
+      ctrl: e.event?.ctrlKey === true || e.event?.metaKey === true,
+      shift: e.event?.shiftKey === true,
+    };
+    this.cells.click(
+      { rowKey: e.key, field: e.column.dataField },
+      mods,
+      cellOrder(e.component)
+    );
+    syncCellClasses(e.component, previous, this.cells);
+  }
+
+  /** Грид перерисовывает ячейки при прокрутке и ресайзе: класс ставится при каждой отрисовке. */
+  onCellPrepared(e: CellPreparedEvent<ProductionRecord, number>): void {
+    if (!isSelectableCell(e.rowType, e.column)) {
+      return;
+    }
+    e.cellElement.setAttribute(CELL_FIELD_ATTR, e.column.dataField);
+    if (this.cellsMode) {
+      e.cellElement.classList.toggle(
+        SELECTED_CELL_CLASS,
+        this.cells.has({ rowKey: e.key, field: e.column.dataField })
+      );
+    }
+  }
+
+  onCopy(): void {
+    void this.copySelection();
+  }
+
+  /** Ctrl+C внутри грида; текст в поле ввода или выделенный мышью копируется штатно. */
+  onGridKeyDown(event: KeyboardEvent): void {
+    if (
+      !isCopyShortcut(event) ||
+      !this.copyEnabled ||
+      isEditableTarget(event.target) ||
+      hasTextSelection()
+    ) {
+      return;
+    }
+    event.preventDefault();
+    void this.copySelection();
+  }
+
   onDelayChange(enabled: boolean): void {
     this.flags.delayMs = enabled ? DEMO_DELAY_MS : 0;
   }
@@ -295,6 +418,32 @@ export class GridComponent implements OnInit, OnDestroy {
     this.resetting = true;
     this.storage.clear();
     location.reload();
+  }
+
+  private async copySelection(): Promise<void> {
+    const instance = this.grid?.instance;
+    if (instance === undefined) {
+      return;
+    }
+    const table = selectionTable(instance, this.cellsMode ? this.cells : null);
+    if (table === null) {
+      notify(
+        'Данные части выбранных строк ещё не загружены, повторите позже',
+        'warning',
+        NOTIFY_ERROR_MS
+      );
+      return;
+    }
+    try {
+      await this.clipboard.copy(toExcelText(table.header, table.rows));
+      notify(
+        `Скопировано строк: ${table.rows.length}`,
+        'success',
+        NOTIFY_SUCCESS_MS
+      );
+    } catch {
+      notify('Не удалось скопировать в буфер обмена', 'error', NOTIFY_ERROR_MS);
+    }
   }
 
   /**

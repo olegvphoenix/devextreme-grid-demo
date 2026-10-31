@@ -48,6 +48,18 @@
   min-height: 300px;
 }
 
+/* В режиме ячеек Shift+клик строит прямоугольник, а не выделяет текст. */
+.grid-page__grid--cells ::ng-deep .dx-datagrid-rowsview {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ячейки рисует DevExtreme вне шаблонов Angular: селектор глубокий. */
+:host ::ng-deep .dx-datagrid-rowsview .dx-row > td.grid-cell--selected {
+  background-color: rgba(3, 169, 244, 0.16);
+  box-shadow: inset 0 0 0 1px #03a9f4;
+}
+
 .grid-header {
   display: inline-flex;
   align-items: center;

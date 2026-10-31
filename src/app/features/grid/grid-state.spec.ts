@@ -4,6 +4,8 @@ import {
   DEFAULT_PAGE_SETTINGS,
   detachWidths,
   DxGridState,
+  limitSelectedRowKeys,
+  MAX_RESTORED_SELECTION,
   readGridState,
   readPageSettings,
   readScrollWidths,
@@ -39,6 +41,36 @@ describe('grid-state', () => {
       const state = stateWith([], { filterValue: ['id', '=', 1] });
       stripVolatileState(state);
       expect(state.filterValue).toEqual(['id', '=', 1]);
+    });
+  });
+
+  describe('limitSelectedRowKeys', () => {
+    const keys = (n: number): number[] =>
+      Array.from({ length: n }, (_, i) => 1000000 - i);
+
+    it('до предела ключи остаются', () => {
+      const state = stateWith([], {
+        selectedRowKeys: keys(MAX_RESTORED_SELECTION),
+      });
+      expect(limitSelectedRowKeys(state)).toEqual(state);
+    });
+
+    it('сверх предела ключи убираются целиком, остальное остаётся', () => {
+      const state = stateWith([{ dataField: 'id' }], {
+        selectedRowKeys: keys(MAX_RESTORED_SELECTION + 1),
+      });
+      expect(limitSelectedRowKeys(state)).toEqual(
+        stateWith([{ dataField: 'id' }])
+      );
+      expect(state.selectedRowKeys!.length).toBe(MAX_RESTORED_SELECTION + 1);
+    });
+
+    it('без ключей состояние не меняется', () => {
+      expect(limitSelectedRowKeys({ pageIndex: 1 })).toEqual({ pageIndex: 1 });
+    });
+
+    it('предел — 40: фильтр грида по 7-значным ключам укладывается в 1500 символов', () => {
+      expect(MAX_RESTORED_SELECTION).toBe(40);
     });
   });
 
@@ -156,6 +188,18 @@ describe('grid-state', () => {
       const raw = JSON.parse(localStorage.getItem('dxgrid-demo:state')!);
       expect('filterValue' in raw).toBeFalse();
       expect(readGridState(storage)).toEqual(stateWith([{ dataField: 'id' }]));
+    });
+
+    it('saveGridState не сохраняет выбор больше предела', () => {
+      saveGridState(
+        storage,
+        stateWith([], {
+          selectedRowKeys: Array.from({ length: 50 }, (_, i) => i + 1),
+        })
+      );
+      expect(readGridState(storage)).toEqual(stateWith([]));
+      saveGridState(storage, stateWith([], { selectedRowKeys: [1, 2, 3] }));
+      expect(readGridState(storage)!.selectedRowKeys).toEqual([1, 2, 3]);
     });
 
     it('ширины режима прокрутки откладываются и возвращаются', () => {

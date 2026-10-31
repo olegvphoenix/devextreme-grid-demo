@@ -24,7 +24,27 @@
       (onValueChanged)="onWidthModeChange($event.value)"
     ></dx-radio-group>
   </div>
-  <span id="selection" class="grid-page__anchor"></span>
+  <div class="grid-page__group" id="selection">
+    <span class="grid-page__label">Выбор</span>
+    <dx-select-box
+      data-testid="selection-mode"
+      [items]="selectionModes"
+      displayExpr="text"
+      valueExpr="value"
+      [value]="settings.selectionMode"
+      [width]="290"
+      (onValueChanged)="onSelectionModeChange($event.value)"
+    ></dx-select-box>
+    <dx-button
+      data-testid="copy-selection"
+      text="Копировать"
+      icon="copy"
+      hint="Скопировать выделение для вставки в Excel (Ctrl+C)"
+      stylingMode="outlined"
+      [disabled]="!copyEnabled"
+      (onClick)="onCopy()"
+    ></dx-button>
+  </div>
   <div class="grid-page__group">
     <dx-check-box
       data-testid="demo-delay"
@@ -77,12 +97,18 @@
 <span id="templates" class="grid-page__anchor"></span>
 <span id="grouping" class="grid-page__anchor"></span>
 
-<div id="pagination" class="grid-page__grid">
+<div
+  id="pagination"
+  class="grid-page__grid"
+  [class.grid-page__grid--cells]="cellsMode"
+  (keydown)="onGridKeyDown($event)"
+>
   <dx-data-grid
     data-testid="grid"
     [dataSource]="dataSource"
     [columns]="columns"
     [filterValue]="filterValue"
+    [selection]="selection"
     [remoteOperations]="remoteOperations"
     [paging]="paging"
     [pager]="pager"
@@ -105,6 +131,9 @@
     [dateSerializationFormat]="dateSerializationFormat"
     (onContentReady)="onContentReady($event)"
     (onOptionChanged)="onOptionChanged($event)"
+    (onSelectionChanged)="onSelectionChanged($event)"
+    (onCellClick)="onCellClick($event)"
+    (onCellPrepared)="onCellPrepared($event)"
   >
     <div *dxTemplate="let header of 'headerCell'" class="grid-header">
       <span class="grid-header__caption">{{ header.column.caption }}</span>

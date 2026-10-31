@@ -52,6 +52,15 @@ const SELECTION_MODES: SelectionMode[] = [
   'cells',
 ];
 
+/**
+ * Сколько выбранных строк переживает перезагрузку. Ключи не с текущей страницы
+ * грид догружает запросом с фильтром `or` по ключам; фильтр длиннее 1500
+ * символов (`selection.maxFilterLengthInRequest`, в типах 23.2 не вынесен) он
+ * заменяет запросом всего набора без фильтра — на 1 000 000 строк это 343 МБ.
+ * 40 семизначных ключей укладываются в 1500 символов.
+ */
+export const MAX_RESTORED_SELECTION = 40;
+
 const KEY_STATE = 'state';
 const KEY_DATASET = 'dataset';
 const KEY_WIDTH_MODE = 'width-mode';
@@ -61,6 +70,18 @@ const KEY_SCROLL_WIDTHS = 'scroll-widths';
 /** Фильтры живут в состоянии страницы, грид получает их отдельно. */
 export function stripVolatileState(state: DxGridState): DxGridState {
   const { filterValue, ...rest } = state;
+  return rest;
+}
+
+/** Выбор сверх предела не сохраняется целиком: частичное восстановление хуже отсутствия. */
+export function limitSelectedRowKeys(state: DxGridState): DxGridState {
+  if (
+    state.selectedRowKeys === undefined ||
+    state.selectedRowKeys.length <= MAX_RESTORED_SELECTION
+  ) {
+    return state;
+  }
+  const { selectedRowKeys, ...rest } = state;
   return rest;
 }
 
@@ -137,7 +158,7 @@ export function saveGridState(
   storage: StorageService,
   state: DxGridState
 ): void {
-  storage.write(KEY_STATE, stripVolatileState(state));
+  storage.write(KEY_STATE, limitSelectedRowKeys(stripVolatileState(state)));
 }
 
 export function readScrollWidths(storage: StorageService): ColumnWidths {
