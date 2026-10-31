@@ -6,12 +6,14 @@ import { DxDataGridModule } from 'devextreme-angular/ui/data-grid';
 import { DxRadioGroupModule } from 'devextreme-angular/ui/radio-group';
 import { DxSelectBoxModule } from 'devextreme-angular/ui/select-box';
 
+import { FiltersModule } from '../../shared/filters/filters.module';
+import { FilterChipsComponent } from './filter-chips.component';
 import { GridRoutingModule } from './grid-routing.module';
 import { GridComponent } from './grid.component';
 import { MetricsPanelComponent } from './metrics-panel.component';
 
 @NgModule({
-  declarations: [GridComponent, MetricsPanelComponent],
+  declarations: [GridComponent, MetricsPanelComponent, FilterChipsComponent],
   imports: [
     CommonModule,
     DxButtonModule,
@@ -19,6 +21,7 @@ import { MetricsPanelComponent } from './metrics-panel.component';
     DxDataGridModule,
     DxRadioGroupModule,
     DxSelectBoxModule,
+    FiltersModule,
     GridRoutingModule,
   ],
 })

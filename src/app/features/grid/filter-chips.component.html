@@ -1,0 +1,25 @@
+<div *ngIf="chips.length > 0" class="filter-chips" data-testid="filter-chips">
+  <span
+    *ngFor="let chip of chips; trackBy: trackByField"
+    class="filter-chips__chip"
+    [attr.data-testid]="'filter-chip-' + chip.field"
+  >
+    <span class="filter-chips__text">{{ chip.caption }}: {{ chip.text }}</span>
+    <button
+      type="button"
+      class="filter-chips__remove"
+      [attr.data-testid]="'filter-chip-remove-' + chip.field"
+      [attr.aria-label]="'Снять фильтр: ' + chip.caption"
+      (click)="remove.emit(chip.field)"
+    >
+      <i class="dx-icon dx-icon-close"></i>
+    </button>
+  </span>
+  <dx-button
+    *ngIf="chips.length > 1"
+    data-testid="filter-chips-clear"
+    text="Сбросить фильтры"
+    stylingMode="text"
+    (onClick)="clear.emit()"
+  ></dx-button>
+</div>

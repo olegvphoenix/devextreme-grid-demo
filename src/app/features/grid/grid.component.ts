@@ -26,21 +26,36 @@ import {
   Properties,
   Scrolling,
 } from 'devextreme/ui/data_grid';
+import { Subscription } from 'rxjs';
 
 import { ApiError } from '../../core/api-error';
 import { DataService } from '../../core/data.service';
 import { DemoFlagsService } from '../../core/demo-flags.service';
 import { GridMetricsService } from '../../core/grid-metrics.service';
 import { StorageService } from '../../core/storage.service';
+import {
+  FilterExpression,
+  GridFilterState,
+} from '../../models/column-filter.model';
 import { DATASET_SIZES, DatasetSize } from '../../models/dataset.model';
 import { ProductionRecord } from '../../models/production-record.model';
 import { DATE_SERIALIZATION_FORMAT } from '../../shared/date-format';
 import {
+  ColumnFilterApply,
+  FilterColumn,
+} from '../../shared/filters/column-filter-popup.component';
+import {
+  buildFilterExpression,
+  isColumnFilterActive,
+} from '../../shared/filters/filter-expression';
+import {
   defaultScrollWidths,
   DxColumn,
   GRID_COLUMNS,
+  GridColumnDef,
   toDxColumns,
 } from './grid-columns';
+import { GridFilterStateService } from './grid-filter-state.service';
 import {
   attachWidths,
   detachWidths,
@@ -59,8 +74,6 @@ import { createGridStore } from './grid-store';
 /** Задержка ответа сервера по переключателю «Задержка ответа». */
 const DEMO_DELAY_MS = 1500;
 const PAGE_SIZES = [20, 50, 100, 500];
-/** Высота фиксирована, прокрутка внутри грида: так FPS меряется на 500 строках. */
-const GRID_HEIGHT = 'calc(100vh - 330px)';
 const SORT_OPTION = /^columns\[\d+\]\.(sortOrder|sortIndex)$/;
 
 interface WidthModeItem {
@@ -85,7 +98,7 @@ export class GridComponent implements OnInit, OnDestroy {
     size.toLocaleString('ru-RU');
 
   readonly dateSerializationFormat = DATE_SERIALIZATION_FORMAT;
-  readonly gridHeight = GRID_HEIGHT;
+  readonly filterColumns: GridColumnDef[] = GRID_COLUMNS;
   readonly remoteOperations: NonNullable<Properties['remoteOperations']> = {
     paging: true,
     sorting: true,
@@ -114,7 +127,7 @@ export class GridComponent implements OnInit, OnDestroy {
     enabled: true,
     type: 'custom',
     savingTimeout: 0,
-    customLoad: () => Promise.resolve(readGridState(this.storage) ?? {}),
+    customLoad: () => Promise.resolve(this.initialState()),
     customSave: (state: DxGridState) => this.saveState(state),
   };
 
@@ -123,6 +136,13 @@ export class GridComponent implements OnInit, OnDestroy {
   dataSource: DataSource<ProductionRecord, number>;
   error: string | null = null;
 
+  filterState: GridFilterState;
+  filterValue: FilterExpression | null;
+  filterColumn: FilterColumn | null = null;
+  filterTarget: HTMLElement | null = null;
+  filterVisible = false;
+
+  private readonly filterSubscription: Subscription;
   private stopFps: (() => void) | null = null;
   private resetting = false;
 
@@ -130,10 +150,17 @@ export class GridComponent implements OnInit, OnDestroy {
     private readonly data: DataService,
     private readonly storage: StorageService,
     private readonly flags: DemoFlagsService,
-    private readonly metrics: GridMetricsService
+    private readonly metrics: GridMetricsService,
+    private readonly filters: GridFilterStateService
   ) {
     this.metrics.markStart('first-render');
     this.settings = readPageSettings(this.storage);
+    this.filterState = this.filters.snapshot;
+    this.filterValue = buildFilterExpression(this.filterState);
+    this.filterSubscription = this.filters.state$.subscribe((state) => {
+      this.filterState = state;
+      this.filterValue = buildFilterExpression(state);
+    });
     this.dataSource = new DataSource<ProductionRecord, number>({
       store: createGridStore(this.data, (e) => this.onLoadError(e)),
     });
@@ -159,6 +186,7 @@ export class GridComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.flushState();
+    this.filterSubscription.unsubscribe();
     this.stopFps?.();
     this.dataSource.dispose();
   }
@@ -166,6 +194,34 @@ export class GridComponent implements OnInit, OnDestroy {
   @HostListener('window:beforeunload')
   onBeforeUnload(): void {
     this.flushState();
+  }
+
+  isFilterActive(field: string): boolean {
+    return isColumnFilterActive(this.filterState[field]);
+  }
+
+  /** Клик по иконке в заголовке: не доходит до ячейки, иначе сработает сортировка. */
+  openFilter(field: string, event: Event): void {
+    event.stopPropagation();
+    const column = GRID_COLUMNS.find((def) => def.field === field);
+    if (column === undefined) {
+      return;
+    }
+    this.filterColumn = column;
+    this.filterTarget = event.currentTarget as HTMLElement;
+    this.filterVisible = true;
+  }
+
+  onFilterApply(change: ColumnFilterApply): void {
+    this.changeFilters(() => this.filters.set(change.field, change.value));
+  }
+
+  onFilterRemove(field: string): void {
+    this.changeFilters(() => this.filters.set(field, null));
+  }
+
+  onFiltersClear(): void {
+    this.changeFilters(() => this.filters.clearAll());
   }
 
   onContentReady(e: ContentReadyEvent): void {
@@ -241,8 +297,27 @@ export class GridComponent implements OnInit, OnDestroy {
     location.reload();
   }
 
+  /**
+   * Замер «Фильтрация» идёт от действия до onContentReady; если выражение не
+   * изменилось, грид ничего не грузит и замер снимается.
+   */
+  private changeFilters(change: () => void): void {
+    const before = JSON.stringify(this.filterValue);
+    this.metrics.markStart('filter');
+    change();
+    if (JSON.stringify(this.filterValue) === before) {
+      this.metrics.cancelPending();
+    }
+  }
+
+  /** Сохранённое состояние грида плюс текущие фильтры: `applyState` ставит `filterValue` из него. */
+  private initialState(): DxGridState {
+    return { ...readGridState(this.storage), filterValue: this.filterValue };
+  }
+
   private onLoadError(e: ApiError): void {
     this.error = e.message;
+    this.metrics.cancelPending();
   }
 
   private saveState(state: DxGridState): void {

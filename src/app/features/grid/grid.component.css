@@ -1,3 +1,10 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .grid-page__toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -23,10 +30,6 @@
   height: 0;
 }
 
-.grid-page__filters:empty {
-  display: none;
-}
-
 .grid-page__error {
   display: flex;
   align-items: center;
@@ -39,6 +42,51 @@
   color: #b71c1c;
 }
 
+/* Грид занимает остаток страницы и прокручивается внутри: FPS меряется на 500 строках. */
 .grid-page__grid {
+  flex: 1 1 auto;
   min-height: 300px;
+}
+
+.grid-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.grid-header__caption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-header__filter {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+}
+
+.grid-header__filter:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.grid-header__filter .dx-icon {
+  font-size: 15px;
+}
+
+.grid-header__filter--active,
+.grid-header__filter--active:hover {
+  color: #03a9f4;
 }

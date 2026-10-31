@@ -56,6 +56,23 @@ describe('GridMetricsService', () => {
       service.markContentReady();
       expect(filter.value).toBe(42);
     });
+
+    it('cancelPending сбрасывает начатый замер: ошибка загрузки не даёт времени', () => {
+      const sort = latest(service.sortMs$);
+      now = 0;
+      service.markStart('sort');
+      now = 30;
+      service.cancelPending();
+      now = 80;
+      service.markContentReady();
+      expect(sort.value).toBeNull();
+
+      service.cancelPending();
+      service.markStart('sort');
+      now = 100;
+      service.markContentReady();
+      expect(sort.value).toBe(20);
+    });
   });
 
   describe('FPS при прокрутке', () => {

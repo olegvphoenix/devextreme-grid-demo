@@ -45,6 +45,11 @@ export class GridMetricsService {
     this.pending = null;
   }
 
+  /** Загрузка не удалась: следующий onContentReady не относится к начатому замеру. */
+  cancelPending(): void {
+    this.pending = null;
+  }
+
   /**
    * Цикл кадров идёт только пока приходят события прокрутки; возвращает
    * остановку. `scroll` не всплывает, поэтому слушатель перехватывающий:

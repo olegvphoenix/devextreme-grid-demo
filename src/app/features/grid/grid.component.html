@@ -48,7 +48,13 @@
   <span id="export" class="grid-page__anchor"></span>
 </section>
 
-<div id="filters" class="grid-page__filters" data-testid="filter-chips"></div>
+<app-filter-chips
+  id="filters"
+  [columns]="filterColumns"
+  [state]="filterState"
+  (remove)="onFilterRemove($event)"
+  (clear)="onFiltersClear()"
+></app-filter-chips>
 
 <app-metrics-panel id="metrics"></app-metrics-panel>
 
@@ -76,11 +82,12 @@
     data-testid="grid"
     [dataSource]="dataSource"
     [columns]="columns"
+    [filterValue]="filterValue"
     [remoteOperations]="remoteOperations"
     [paging]="paging"
     [pager]="pager"
     [scrolling]="scrolling"
-    [height]="gridHeight"
+    height="100%"
     [showBorders]="true"
     [rowAlternationEnabled]="true"
     [errorRowEnabled]="false"
@@ -98,5 +105,29 @@
     [dateSerializationFormat]="dateSerializationFormat"
     (onContentReady)="onContentReady($event)"
     (onOptionChanged)="onOptionChanged($event)"
-  ></dx-data-grid>
+  >
+    <div *dxTemplate="let header of 'headerCell'" class="grid-header">
+      <span class="grid-header__caption">{{ header.column.caption }}</span>
+      <button
+        type="button"
+        class="grid-header__filter"
+        [class.grid-header__filter--active]="
+          isFilterActive(header.column.dataField)
+        "
+        [attr.data-testid]="'filter-' + header.column.dataField"
+        [attr.aria-label]="'Фильтр: ' + header.column.caption"
+        (click)="openFilter(header.column.dataField, $event)"
+      >
+        <i class="dx-icon dx-icon-filter"></i>
+      </button>
+    </div>
+  </dx-data-grid>
 </div>
+
+<app-column-filter-popup
+  [column]="filterColumn"
+  [target]="filterTarget"
+  [state]="filterState"
+  [(visible)]="filterVisible"
+  (apply)="onFilterApply($event)"
+></app-column-filter-popup>

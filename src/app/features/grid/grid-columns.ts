@@ -68,6 +68,9 @@ export const GRID_COLUMNS: GridColumnDef[] = [
   { field: 'labels', caption: 'Ярлыки', kind: 'labels', width: 180 },
 ];
 
+/** Имя `dxTemplate` заголовка на странице: подпись и кнопка фильтра. */
+export const HEADER_CELL_TEMPLATE = 'headerCell';
+
 export function defaultScrollWidths(defs: GridColumnDef[]): ColumnWidths {
   const widths: ColumnWidths = {};
   defs.forEach((def) => (widths[def.field] = def.width));
@@ -81,22 +84,44 @@ export function defaultScrollWidths(defs: GridColumnDef[]): ColumnWidths {
  */
 export type DxColumn = DevExpress.ui.dxDataGridColumn;
 
+/**
+ * Фильтр ярлыков идёт по служебному полю `labelsKey` (`|а|б|`, оператор
+ * contains); грид принимает в `filterValue` только поля своих колонок,
+ * поэтому поле заведено скрытой колонкой.
+ */
+export const LABELS_KEY_COLUMN: DxColumn = {
+  dataField: 'labelsKey',
+  dataType: 'string',
+  visible: false,
+  showInColumnChooser: false,
+  allowFiltering: true,
+  allowSorting: false,
+  allowGrouping: false,
+  allowHeaderFiltering: false,
+};
+
 export function toDxColumns(
   defs: GridColumnDef[],
   widthMode: WidthMode
 ): DxColumn[] {
-  return defs.map((def) => {
+  const columns = defs.map((def) => {
     const column: DxColumn = {
       dataField: def.field,
       caption: def.caption,
       dataType: dataTypeOf(def.kind),
       allowHeaderFiltering: false,
+      headerCellTemplate: HEADER_CELL_TEMPLATE,
     };
     if (widthMode === 'scroll') {
       column.width = def.width;
     }
     if (def.format !== undefined) {
       column.format = def.format;
+    }
+    if (def.kind === 'date') {
+      column.calculateFilterExpression = passThroughFilterExpression(
+        def.field
+      );
     }
     if (def.kind === 'enum') {
       column.customizeText = (cell) => statusName(cell.value);
@@ -108,6 +133,22 @@ export function toDxColumns(
     }
     return column;
   });
+  return [...columns, { ...LABELS_KEY_COLUMN }];
+}
+
+/**
+ * Штатное выражение колонки даты ждёт `Date` или `yyyy/MM/dd` и разворачивает
+ * `=` в сутки; строки `yyyy-MM-dd` с сервера оно превращает в Invalid Date.
+ * Условие уходит на сервер как есть.
+ */
+function passThroughFilterExpression(
+  field: string
+): NonNullable<DxColumn['calculateFilterExpression']> {
+  return (value: unknown, operation: string | null) => [
+    field,
+    operation ?? '=',
+    value,
+  ];
 }
 
 function dataTypeOf(kind: ColumnKind): DataType {

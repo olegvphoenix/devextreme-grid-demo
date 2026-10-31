@@ -1,5 +1,12 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
 .app-menu {
   display: flex;
+  flex: 0 0 auto;
   gap: 8px;
   padding: 8px 16px;
   border-bottom: 1px solid #e0e0e0;
@@ -17,6 +24,12 @@
   font-weight: 500;
 }
 
+/* Страница занимает остаток окна; длинные разделы прокручиваются здесь, не в окне. */
 .app-content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
   padding: 16px;
+  overflow: auto;
 }
