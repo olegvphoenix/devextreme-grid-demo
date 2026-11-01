@@ -3,6 +3,7 @@ import { Observable, Subject, Subscription } from 'rxjs';
 import { FilterExpression } from '../../../models/column-filter.model';
 import { ColumnStats, DistinctResult } from '../../../models/distinct.model';
 import {
+  ExportRequest,
   GridLoadOptions,
   GridLoadResult,
 } from '../../../models/load-options.model';
@@ -25,6 +26,11 @@ export interface StatsCall {
   filter: FilterExpression | null;
 }
 
+export interface ExportCall {
+  kind: 'xlsx' | 'pdf';
+  request: ExportRequest;
+}
+
 /** Заглушка `DataService`: каждый вызов — свой Subject, ответ выдаётся тестом. */
 export class DataServiceStub {
   readonly queryCalls: GridLoadOptions[] = [];
@@ -32,6 +38,7 @@ export class DataServiceStub {
   readonly distinctCalls: DistinctCall[] = [];
   readonly statsCalls: StatsCall[] = [];
   readonly labelsCalls: LabelsCall[] = [];
+  readonly exportCalls: ExportCall[] = [];
   /** Сколько прежних запросов stats ещё были подписаны в момент каждого вызова. */
   readonly statsPendingAtCall: number[] = [];
 
@@ -40,6 +47,7 @@ export class DataServiceStub {
   private readonly distinctSubjects: Subject<DistinctResult>[] = [];
   private readonly statsSubjects: Subject<ColumnStats>[] = [];
   private readonly labelsSubjects: Subject<ProductionRecord>[] = [];
+  private readonly exportSubjects: Subject<Blob>[] = [];
   private activeQuery: Subscription | null = null;
 
   /** Как `inGroup` в DataService: новый запрос отписывает потребителя прежнего. */
@@ -169,6 +177,30 @@ export class DataServiceStub {
 
   failLabels(status: number, message: string): void {
     const subject = this.labelsSubjects[this.labelsSubjects.length - 1];
+    subject.error(new ApiError(status, message));
+  }
+
+  exportFile(kind: 'xlsx' | 'pdf', request: ExportRequest): Observable<Blob> {
+    this.exportCalls.push({ kind, request });
+    const subject = new Subject<Blob>();
+    this.exportSubjects.push(subject);
+    return subject.asObservable();
+  }
+
+  /** Запрос экспорта ещё ждут: отписка снимает подписчика. */
+  isExportPending(): boolean {
+    const subject = this.exportSubjects[this.exportSubjects.length - 1];
+    return subject !== undefined && subject.observers.length > 0;
+  }
+
+  respondExport(blob: Blob): void {
+    const subject = this.exportSubjects[this.exportSubjects.length - 1];
+    subject.next(blob);
+    subject.complete();
+  }
+
+  failExport(status: number, message: string): void {
+    const subject = this.exportSubjects[this.exportSubjects.length - 1];
     subject.error(new ApiError(status, message));
   }
 }
