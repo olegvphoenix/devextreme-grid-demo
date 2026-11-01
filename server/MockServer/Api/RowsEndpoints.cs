@@ -1,5 +1,4 @@
 using System.Text.Json;
-using DevExtreme.AspNet.Data;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
 using MockServer.Data;
@@ -31,7 +30,7 @@ public static class RowsEndpoints
 
         using (lease)
         {
-            var result = DataSourceLoader.Load(store.Get(dataset).AsQueryable(), options);
+            var result = RowsQuery.Load(store.Get(dataset).AsQueryable(), options);
             context.Response.ContentType = "application/json; charset=utf-8";
             await JsonSerializer.SerializeAsync(
                 context.Response.Body, result, json.Value.SerializerOptions, context.RequestAborted);

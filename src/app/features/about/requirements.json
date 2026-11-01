@@ -88,7 +88,7 @@
       "Column.allowSorting",
       "Column.customizeText"
     ],
-    "limitations": "Статус сортируется по коду enum, а не по подписи: customizeText оставляет selector: 'status' в запросе, calculateDisplayValue увёл бы сортировку на клиент. Колонка ярлыков (массив) не сортируется и не группируется. Клик по подписи в своём шаблоне заголовка сортирует штатно, клик по иконке фильтра — нет (stopPropagation). На 1 000 000 строк: date desc 112–138 мс, две колонки 127–168 мс (сервер 34–56 мс).",
+    "limitations": "Статус сортируется по коду enum, а не по подписи: customizeText оставляет selector: 'status' в запросе, calculateDisplayValue увёл бы сортировку на клиент. Колонка ярлыков (массив) не сортируется и не группируется. Клик по подписи в своём шаблоне заголовка сортирует штатно, клик по иконке фильтра — нет (stopPropagation). DataSourceLoader считает totalSummary по отсортированному запросу — на 1 000 000 строк это полная сортировка на каждый запрос (сервер 480–540 мс вместо 35–45 без итогов); сервер считает итоги вторым проходом без сортировки (RowsQuery). На 1 000 000 строк: date desc 647–743 мс от клика до строк (сервер 483–533) до этой правки, замер с ней — в docs/measurements.md.",
     "demoLink": "/grid#sorting"
   },
   {
@@ -319,6 +319,7 @@
     "assessment": "штатно",
     "locFiles": [
       "server/MockServer/Api/RowsEndpoints.cs",
+      "server/MockServer/Api/RowsQuery.cs",
       "server/MockServer/Api/LoadOptionsReader.cs"
     ],
     "apis": [

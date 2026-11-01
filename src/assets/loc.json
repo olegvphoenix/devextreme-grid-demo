@@ -19,7 +19,7 @@
     "template-actions": 0,
     "template-labels": 257,
     "loading": 411,
-    "grouping": 78,
+    "grouping": 103,
     "export": 472,
     "dataset": 230,
     "settings": 140,
@@ -29,7 +29,7 @@
     "extra-generate": 42,
     "extra-docker": 0
   },
-  "shared": 992,
+  "shared": 993,
   "files": {
     "src/app/core/grid-metrics.service.ts": 94,
     "src/app/features/grid/metrics-panel.component.ts": 14,
@@ -75,7 +75,8 @@
     "src/app/core/api-error.ts": 6,
     "src/app/features/grid/grid-store.ts": 172,
     "src/app/models/load-options.model.ts": 47,
-    "server/MockServer/Api/RowsEndpoints.cs": 48,
+    "server/MockServer/Api/RowsEndpoints.cs": 47,
+    "server/MockServer/Api/RowsQuery.cs": 26,
     "server/MockServer/Api/LoadOptionsReader.cs": 30,
     "src/app/features/grid/export-request.ts": 87,
     "src/app/features/grid/native-export.ts": 60,
@@ -105,7 +106,7 @@
     "src/app/core/demo-headers.interceptor.ts": 29,
     "server/MockServer/Api/DemoHeadersMiddleware.cs": 25,
     "server/MockServer/Data/CsvWriter.cs": 42,
-    "src/app/features/grid/grid.component.ts": 624,
+    "src/app/features/grid/grid.component.ts": 625,
     "src/app/features/grid/grid.component.html": 243,
     "src/app/features/grid/grid.component.css": 125
   }
