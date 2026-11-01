@@ -21,7 +21,7 @@ public static class RowsEndpoints
         var (dataset, options) = LoadOptionsReader.Read(await LoadOptionsReader.ReadForm(context.Request));
 
         IDisposable? lease = null;
-        if (options.Take <= 0 && !limiter.TryEnter(out lease))
+        if (HeavyRequestLimiter.IsHeavy(options) && !limiter.TryEnter(out lease))
         {
             context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
             await context.Response.WriteAsJsonAsync(new { message = HeavyRequestLimiter.BusyMessage });

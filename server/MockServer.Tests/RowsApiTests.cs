@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using DevExtreme.AspNet.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using MockServer.Api;
@@ -124,6 +125,55 @@ public class RowsApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.False(limiter.TryEnter(out _));
         second.Dispose();
         third.Dispose();
+    }
+
+    [Theory]
+    [InlineData(0, null, true)]
+    [InlineData(-1, null, true)]
+    [InlineData(501, null, true)]
+    [InlineData(1000000, null, true)]
+    [InlineData(20, true, true)]
+    [InlineData(500, null, false)]
+    [InlineData(20, false, false)]
+    [InlineData(1, null, false)]
+    public void HeavyMeansNoPageALargePageOrAnExpandedGroup(int take, bool? isExpanded, bool heavy)
+    {
+        var options = new DataSourceLoadOptionsBase { Take = take };
+        if (isExpanded is not null)
+            options.Group = new[] { new GroupingInfo { Selector = "plant", IsExpanded = isExpanded.Value } };
+
+        Assert.Equal(heavy, HeavyRequestLimiter.IsHeavy(options));
+    }
+
+    [Theory]
+    [InlineData("take", "1000000", null, null)]
+    [InlineData("take", "20", "group", "[{\"selector\":\"status\",\"isExpanded\":true}]")]
+    public async Task LargePageOrExpandedGroupIs429WhenTheLimiterIsFull(string key, string value, string? key2, string? value2)
+    {
+        var fields = key2 is null
+            ? new[] { ("dataset", "1000"), (key, value) }
+            : new[] { ("dataset", "1000"), (key, value), (key2, value2!) };
+        var limiter = _factory.Services.GetRequiredService<HeavyRequestLimiter>();
+        Assert.True(limiter.TryEnter(out var first));
+        Assert.True(limiter.TryEnter(out var second));
+        try
+        {
+            var heavy = await ApiClient.PostForm(_client, "/api/rows/query", fields);
+            Assert.Equal((HttpStatusCode)429, heavy.StatusCode);
+            var json = JsonDocument.Parse(await heavy.Content.ReadAsStringAsync()).RootElement;
+            Assert.False(string.IsNullOrEmpty(json.GetProperty("message").GetString()));
+
+            var largestPage = await ApiClient.PostForm(_client, "/api/rows/query", ("dataset", "1000"), ("take", "500"));
+            Assert.Equal(HttpStatusCode.OK, largestPage.StatusCode);
+            var collapsedGroups = await ApiClient.PostForm(_client, "/api/rows/query", ("dataset", "1000"), ("take", "20"),
+                ("group", "[{\"selector\":\"plant\",\"isExpanded\":false}]"), ("requireGroupCount", "true"));
+            Assert.Equal(HttpStatusCode.OK, collapsedGroups.StatusCode);
+        }
+        finally
+        {
+            first.Dispose();
+            second.Dispose();
+        }
     }
 
     [Fact]
