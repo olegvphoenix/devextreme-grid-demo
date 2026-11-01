@@ -95,7 +95,13 @@ describe('toDxColumns', () => {
   it('defaultFitWidths отдаёт проценты по полям для возврата в режим «По ширине»', () => {
     const widths = defaultFitWidths(GRID_COLUMNS);
     expect(widths.id).toBe('4%');
-    expect(Object.keys(widths).length).toBe(GRID_COLUMNS.length);
+    GRID_COLUMNS.forEach((def) => {
+      expect(widths[def.field]).withContext(def.field).toBeDefined();
+    });
+  });
+
+  it('defaultFitWidths возвращает ширину колонки действий: состояние режима прокрутки её снимает', () => {
+    expect(defaultFitWidths(GRID_COLUMNS).actions).toBe(100);
   });
 });
 

@@ -37,6 +37,7 @@
       data-testid="copy-selection"
       icon="copy"
       hint="Скопировать выделение для вставки в Excel (Ctrl+C)"
+      [elementAttr]="copyButtonAttr"
       stylingMode="outlined"
       [disabled]="!copyEnabled"
       (onClick)="onCopy()"

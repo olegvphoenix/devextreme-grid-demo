@@ -178,6 +178,7 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
     size.toLocaleString('ru-RU');
 
   readonly menuOptions = { width: 220 };
+  readonly copyButtonAttr = { 'aria-label': 'Скопировать выделение' };
 
   readonly dateSerializationFormat = DATE_SERIALIZATION_FORMAT;
   readonly filterColumns: GridColumnDef[] = GRID_COLUMNS;
@@ -199,7 +200,7 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
   };
   readonly scrolling: Scrolling = { mode: 'standard', useNative: true };
   readonly columnFixing: ColumnFixing = { enabled: true };
-  readonly columnMinWidth = 48;
+  readonly columnMinWidth = 40;
   readonly columnChooser: ColumnChooser = { enabled: true, mode: 'select' };
   readonly sorting: Sorting = { mode: 'multiple' };
   readonly filterPanel: FilterPanel = { visible: false };

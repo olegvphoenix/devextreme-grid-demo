@@ -14,6 +14,7 @@ export interface SettingsRow {
   styleUrls: ['./settings.component.css'],
 })
 export class SettingsComponent implements OnInit {
+  readonly removeButtonAttr = { 'aria-label': 'Удалить ключ' };
   rows: SettingsRow[] = [];
 
   constructor(private readonly storage: StorageService) {}

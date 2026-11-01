@@ -39,6 +39,7 @@
         data-testid="settings-remove"
         icon="close"
         hint="Удалить ключ"
+        [elementAttr]="removeButtonAttr"
         stylingMode="text"
         (onClick)="remove(row.key)"
       ></dx-button>

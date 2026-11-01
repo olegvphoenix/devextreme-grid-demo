@@ -28,6 +28,7 @@ export interface GridColumnDef {
 
 const WEIGHT_FORMAT = '#,##0.0';
 const INTEGER_FORMAT = '#,##0';
+const ACTIONS_WIDTH = 100;
 
 export const GRID_COLUMNS: GridColumnDef[] = [
   { field: 'id', caption: 'ID', kind: 'number', width: 120, fitPercent: 4 },
@@ -193,7 +194,7 @@ export function defaultScrollWidths(defs: GridColumnDef[]): ColumnWidths {
 }
 
 export function defaultFitWidths(defs: GridColumnDef[]): FitWidths {
-  const widths: FitWidths = {};
+  const widths: FitWidths = { actions: ACTIONS_WIDTH };
   defs.forEach((def) => (widths[def.field] = fitWidth(def)));
   return widths;
 }
@@ -234,7 +235,7 @@ export function actionsColumn(
     type: 'buttons',
     name: 'actions',
     caption: 'Действия',
-    width: 100,
+    width: ACTIONS_WIDTH,
     fixed: true,
     fixedPosition: 'right',
     allowResizing: false,

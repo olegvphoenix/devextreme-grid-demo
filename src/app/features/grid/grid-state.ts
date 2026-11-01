@@ -36,7 +36,7 @@ export interface DxGridState {
 }
 
 export type ColumnWidths = Record<string, number>;
-export type FitWidths = Record<string, string>;
+export type FitWidths = Record<string, string | number>;
 
 export const DEFAULT_PAGE_SETTINGS: GridPageSettings = {
   dataset: 1000,
