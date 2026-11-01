@@ -10,7 +10,9 @@ public sealed record StatsResponse(object? Min, object? Max, int Count);
 
 public static class ColumnEndpoints
 {
-    private const int DefaultTake = 5000;
+    /// <summary>Столько значений показывает список фильтра клиента; больше сервер не отдаёт.</summary>
+    private const int MaxTake = 5000;
+    private const int DefaultTake = MaxTake;
 
     public static void MapColumns(this IEndpointRouteBuilder app)
     {
@@ -51,8 +53,9 @@ public static class ColumnEndpoints
     private static int ReadTake(string? value)
     {
         if (string.IsNullOrEmpty(value)) return DefaultTake;
-        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var take) && take > 0) return take;
-        throw new BadHttpRequestException("Параметр take должен быть положительным целым числом");
+        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var take) && take > 0 && take <= MaxTake)
+            return take;
+        throw new BadHttpRequestException($"Параметр take должен быть целым числом от 1 до {MaxTake}");
     }
 
     internal abstract class Column

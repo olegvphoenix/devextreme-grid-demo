@@ -163,10 +163,20 @@ public class DistinctApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.False(string.IsNullOrEmpty(json.GetProperty("message").GetString()));
     }
 
+    [Fact]
+    public async Task TakeAtTheCapIsAccepted()
+    {
+        var r = await Distinct(("dataset","1000"),("field","id"),("take","5000"));
+
+        Assert.Equal(1000, r.GetProperty("items").GetArrayLength());
+    }
+
     [Theory]
     [InlineData("0")]
     [InlineData("-5")]
     [InlineData("many")]
+    [InlineData("5001")]
+    [InlineData("1000000")]
     public async Task InvalidTakeIs400WithMessage(string take)
     {
         var response = await ApiClient.PostForm(_client, "/api/distinct", ("dataset", "1000"), ("field", "id"), ("take", take));
