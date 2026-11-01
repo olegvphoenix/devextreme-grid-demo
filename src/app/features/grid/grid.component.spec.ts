@@ -68,6 +68,27 @@ describe('GridComponent', () => {
     reopened.ngOnDestroy();
   });
 
+  it('opening the page takes the demo flags from storage, not from the previous visit', () => {
+    component.onDelayChange(true);
+    component.onFailChange(true);
+    localStorage.removeItem('dxgrid-demo:demo-flags');
+
+    const reopened = new GridComponent(
+      TestBed.inject(DataService),
+      TestBed.inject(StorageService),
+      TestBed.inject(DemoFlagsService),
+      TestBed.inject(GridMetricsService),
+      TestBed.inject(GridFilterStateService),
+      TestBed.inject(ClipboardService),
+      TestBed.inject(ActivatedRoute)
+    );
+    reopened.grid = { instance } as unknown as DxDataGridComponent;
+
+    expect(reopened.delayEnabled).toBeFalse();
+    expect(reopened.failEnabled).toBeFalse();
+    reopened.ngOnDestroy();
+  });
+
   it('switching the dataset returns the grid, not only its data source, to the first page', () => {
     component.dataSource.pageIndex(3);
 

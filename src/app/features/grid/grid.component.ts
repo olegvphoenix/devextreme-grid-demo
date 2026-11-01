@@ -263,6 +263,7 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
     this.metrics.markStart('first-render');
     this.settings = readPageSettings(this.storage);
     this.selection = gridSelection(this.settings.selectionMode);
+    this.flags.reload();
     this.filters.reload();
     this.filterState = this.filters.snapshot;
     this.filterValue = buildFilterExpression(this.filterState);

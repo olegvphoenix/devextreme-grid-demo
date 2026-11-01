@@ -16,10 +16,12 @@ export class DemoFlagsService {
   private flags: DemoFlags;
 
   constructor(private readonly storage: StorageService) {
-    this.flags = {
-      ...DEFAULT_FLAGS,
-      ...storage.read<Partial<DemoFlags>>(STORAGE_KEY, {}),
-    };
+    this.flags = this.stored();
+  }
+
+  /** Страница настроек меняет хранилище мимо службы: при открытии грида флаги перечитываются. */
+  reload(): void {
+    this.flags = this.stored();
   }
 
   get delayMs(): number {
@@ -36,6 +38,13 @@ export class DemoFlagsService {
 
   set fail(value: boolean) {
     this.update({ fail: value });
+  }
+
+  private stored(): DemoFlags {
+    return {
+      ...DEFAULT_FLAGS,
+      ...this.storage.read<Partial<DemoFlags>>(STORAGE_KEY, {}),
+    };
   }
 
   private update(change: Partial<DemoFlags>): void {

@@ -30,6 +30,19 @@ describe('DemoFlagsService', () => {
     expect(restored.fail).toBeTrue();
   });
 
+  it('reload перечитывает хранилище: удалённый ключ возвращает умолчания без записи', () => {
+    const flags = new DemoFlagsService(storage);
+    flags.delayMs = 1500;
+    flags.fail = true;
+    localStorage.removeItem('dxgrid-demo:demo-flags');
+
+    flags.reload();
+
+    expect(flags.delayMs).toBe(0);
+    expect(flags.fail).toBeFalse();
+    expect(localStorage.getItem('dxgrid-demo:demo-flags')).toBeNull();
+  });
+
   it('повреждённое хранилище даёт значения по умолчанию', () => {
     localStorage.setItem('dxgrid-demo:demo-flags', '{broken');
     const flags = new DemoFlagsService(storage);
