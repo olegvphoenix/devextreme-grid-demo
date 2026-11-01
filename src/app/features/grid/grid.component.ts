@@ -88,6 +88,7 @@ import {
 } from './export-request';
 import {
   actionsColumn,
+  defaultFitWidths,
   defaultScrollWidths,
   DxColumn,
   GRID_COLUMNS,
@@ -100,6 +101,7 @@ import { GridFilterStateService } from './grid-filter-state.service';
 import {
   attachWidths,
   detachWidths,
+  fillMissingWidths,
   DxGridState,
   GridPageSettings,
   readGridState,
@@ -116,6 +118,7 @@ import { exportGridToExcel, exportGridToPdf, saveBlob } from './native-export';
 /** Задержка ответа сервера по переключателю «Задержка ответа». */
 const DEMO_DELAY_MS = 1500;
 const PAGE_SIZES = [20, 50, 100, 500];
+const DEFAULT_PAGE_SIZE = 50;
 const SORT_OPTION = /^columns\[\d+\]\.(sortOrder|sortIndex)$/;
 const NOTIFY_SUCCESS_MS = 1500;
 const NOTIFY_LONG_MS = 3000;
@@ -161,7 +164,7 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly datasetSizes: DatasetSize[] = DATASET_SIZES;
   readonly widthModes: WidthModeItem[] = [
-    { value: 'fit', text: 'По ширине страницы' },
+    { value: 'fit', text: 'По ширине' },
     { value: 'scroll', text: 'С прокруткой' },
   ];
   readonly selectionModes: SelectionModeItem[] = [
@@ -174,6 +177,8 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly formatDataset = (size: DatasetSize): string =>
     size.toLocaleString('ru-RU');
 
+  readonly menuOptions = { width: 220 };
+
   readonly dateSerializationFormat = DATE_SERIALIZATION_FORMAT;
   readonly filterColumns: GridColumnDef[] = GRID_COLUMNS;
   readonly remoteOperations: NonNullable<Properties['remoteOperations']> = {
@@ -184,7 +189,7 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
     summary: true,
     groupPaging: true,
   };
-  readonly paging: Paging = { enabled: true, pageSize: PAGE_SIZES[0] };
+  readonly paging: Paging = { enabled: true, pageSize: DEFAULT_PAGE_SIZE };
   readonly pager: Pager = {
     visible: true,
     showPageSizeSelector: true,
@@ -194,6 +199,7 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
   };
   readonly scrolling: Scrolling = { mode: 'standard', useNative: true };
   readonly columnFixing: ColumnFixing = { enabled: true };
+  readonly columnMinWidth = 48;
   readonly columnChooser: ColumnChooser = { enabled: true, mode: 'select' };
   readonly sorting: Sorting = { mode: 'multiple' };
   readonly filterPanel: FilterPanel = { visible: false };
@@ -412,7 +418,7 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
     if (mode === 'fit') {
       const { state, widths } = detachWidths(current);
       saveScrollWidths(this.storage, widths);
-      instance.state(state);
+      instance.state(attachWidths(state, defaultFitWidths(GRID_COLUMNS)));
     } else {
       const widths = {
         ...defaultScrollWidths(GRID_COLUMNS),
@@ -663,7 +669,12 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Сохранённое состояние грида плюс текущие фильтры: `applyState` ставит `filterValue` из него. */
   private initialState(): DxGridState {
-    return { ...readGridState(this.storage), filterValue: this.filterValue };
+    const stored = readGridState(this.storage);
+    const state =
+      stored !== null && this.settings.widthMode === 'fit'
+        ? fillMissingWidths(stored, defaultFitWidths(GRID_COLUMNS))
+        : stored;
+    return { ...state, filterValue: this.filterValue };
   }
 
   /** Сбой загрузки всех строк во время штатного экспорта — ошибка экспорта, не полоска грида. */

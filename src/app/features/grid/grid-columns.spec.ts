@@ -1,5 +1,6 @@
 import {
   actionsColumn,
+  defaultFitWidths,
   DxColumnButton,
   GRID_COLUMNS,
   GRID_SUMMARY,
@@ -74,12 +75,27 @@ describe('toDxColumns', () => {
     expect(byField('plant').cellTemplate).toBeUndefined();
   });
 
-  it('ширины задаются только в режиме прокрутки', () => {
-    expect(byField('id').width).toBeUndefined();
+  it('режим «По ширине» делит страницу в процентах, режим прокрутки держит пиксели', () => {
+    expect(byField('id').width).toBe('4%');
     expect(
       toDxColumns(GRID_COLUMNS, 'scroll').find((c) => c.dataField === 'id')!
         .width
     ).toBe(120);
+  });
+
+  it('проценты оставляют место колонкам действий и чекбоксов и различаются по содержимому', () => {
+    const percents = GRID_COLUMNS.map((def) => def.fitPercent);
+    const total = percents.reduce((sum, percent) => sum + percent, 0);
+    expect(total).toBeLessThanOrEqual(88);
+    const code = GRID_COLUMNS.find((def) => def.field === 'markingCode')!;
+    const id = GRID_COLUMNS.find((def) => def.field === 'id')!;
+    expect(code.fitPercent).toBeGreaterThan(id.fitPercent);
+  });
+
+  it('defaultFitWidths отдаёт проценты по полям для возврата в режим «По ширине»', () => {
+    const widths = defaultFitWidths(GRID_COLUMNS);
+    expect(widths.id).toBe('4%');
+    expect(Object.keys(widths).length).toBe(GRID_COLUMNS.length);
   });
 });
 
@@ -155,23 +171,27 @@ describe('GRID_SUMMARY', () => {
     ]);
   });
 
-  it('итоги по всему набору — те же агрегаты, число строк в колонке id', () => {
+  it('итоги по всему набору — одной строкой: число строк и суммы, средние только в группах', () => {
     expect(describe_(GRID_SUMMARY.totalItems!)).toEqual([
       'id:count',
       'netWeight:sum',
-      'netWeight:avg',
       'grossWeight:sum',
-      'grossWeight:avg',
       'qty:sum',
     ]);
+  });
+
+  it('число строк показывается в широкой колонке: в колонке id оно не помещается', () => {
+    expect(GRID_SUMMARY.totalItems![0].showInColumn).toBe('product');
   });
 
   it('подписи на русском, веса с одним знаком, целые без дробной части', () => {
     const all = [...GRID_SUMMARY.groupItems!, ...GRID_SUMMARY.totalItems!];
     all.forEach((item) => {
       expect(item.displayFormat).withContext(String(item.summaryType)).toMatch(
-        /^(Строк|Всего строк|Сумма|Среднее): \{0\}$/
+        /^((Строк|Всего строк): |∑ |ср\. )\{0\}$/
       );
+    });
+    GRID_SUMMARY.groupItems!.forEach((item) => {
       expect(item.valueFormat)
         .withContext(`${item.column}:${item.summaryType}`)
         .toBe(
@@ -179,9 +199,21 @@ describe('GRID_SUMMARY', () => {
             ? '#,##0.0'
             : '#,##0'
         );
-    });
-    GRID_SUMMARY.groupItems!.forEach((item) => {
       expect(item.alignByColumn === true).toBe(item.column !== undefined);
+    });
+  });
+
+  it('агрегаты групп короткие: под колонкой шириной 80 px полная подпись обрезает значение', () => {
+    const texts = GRID_SUMMARY.groupItems!
+      .filter((item) => item.column === 'netWeight')
+      .map((item) => item.displayFormat);
+    expect(texts).toEqual(['∑ {0}', 'ср. {0}']);
+  });
+
+  it('суммы в итогах короткие: знак ∑ и целое число, иначе на миллионе строк колонка режет значение', () => {
+    GRID_SUMMARY.totalItems!.slice(1).forEach((item) => {
+      expect(item.displayFormat).withContext(String(item.column)).toBe('∑ {0}');
+      expect(item.valueFormat).withContext(String(item.column)).toBe('#,##0');
     });
   });
 });

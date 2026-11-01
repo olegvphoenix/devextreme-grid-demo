@@ -35,7 +35,7 @@
             ],
             "styles": [
               "node_modules/devextreme/dist/css/dx.common.css",
-              "node_modules/devextreme/dist/css/dx.material.blue.light.css",
+              "node_modules/devextreme/dist/css/dx.material.blue.light.compact.css",
               "src/styles.css"
             ],
             "scripts": []
@@ -107,7 +107,7 @@
             ],
             "styles": [
               "node_modules/devextreme/dist/css/dx.common.css",
-              "node_modules/devextreme/dist/css/dx.material.blue.light.css",
+              "node_modules/devextreme/dist/css/dx.material.blue.light.compact.css",
               "src/styles.css"
             ],
             "scripts": []

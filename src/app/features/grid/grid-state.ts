@@ -36,6 +36,7 @@ export interface DxGridState {
 }
 
 export type ColumnWidths = Record<string, number>;
+export type FitWidths = Record<string, string>;
 
 export const DEFAULT_PAGE_SETTINGS: GridPageSettings = {
   dataset: 1000,
@@ -87,6 +88,23 @@ export function limitSelectedRowKeys(state: DxGridState): DxGridState {
   return rest;
 }
 
+/** Состояние без ширины отменило бы проценты режима «По ширине»: грид поделил бы страницу поровну. */
+export function fillMissingWidths(
+  state: DxGridState,
+  widths: FitWidths
+): DxGridState {
+  if (state.columns === undefined) {
+    return state;
+  }
+  const columns = state.columns.map((column) => {
+    const field = columnKey(column);
+    return column.width === undefined && field !== undefined && field in widths
+      ? { ...column, width: widths[field] }
+      : column;
+  });
+  return { ...state, columns };
+}
+
 export function detachWidths(state: DxGridState): {
   state: DxGridState;
   widths: ColumnWidths;
@@ -108,7 +126,7 @@ export function detachWidths(state: DxGridState): {
 
 export function attachWidths(
   state: DxGridState,
-  widths: ColumnWidths
+  widths: ColumnWidths | FitWidths
 ): DxGridState {
   if (state.columns === undefined) {
     return { ...state };

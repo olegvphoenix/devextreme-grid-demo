@@ -1,19 +1,17 @@
-<h1>Основная страница</h1>
-
 <section class="grid-page__toolbar" data-testid="grid-toolbar">
   <div class="grid-page__group" id="dataset">
-    <span class="grid-page__label">Строк в наборе</span>
+    <span class="grid-page__label">Строк</span>
     <dx-select-box
       data-testid="dataset-size"
       [items]="datasetSizes"
       [value]="settings.dataset"
       [displayExpr]="formatDataset"
-      [width]="140"
+      [width]="120"
       (onValueChanged)="onDatasetChange($event.value)"
     ></dx-select-box>
   </div>
   <div class="grid-page__group" id="columns">
-    <span class="grid-page__label">Ширина колонок</span>
+    <span class="grid-page__label">Колонки</span>
     <dx-radio-group
       data-testid="width-mode"
       [items]="widthModes"
@@ -32,12 +30,11 @@
       displayExpr="text"
       valueExpr="value"
       [value]="settings.selectionMode"
-      [width]="290"
+      [width]="230"
       (onValueChanged)="onSelectionModeChange($event.value)"
     ></dx-select-box>
     <dx-button
       data-testid="copy-selection"
-      text="Копировать"
       icon="copy"
       hint="Скопировать выделение для вставки в Excel (Ctrl+C)"
       stylingMode="outlined"
@@ -45,64 +42,54 @@
       (onClick)="onCopy()"
     ></dx-button>
   </div>
-  <div class="grid-page__group" id="loading">
-    <dx-check-box
-      data-testid="demo-delay"
-      text="Задержка ответа"
-      [value]="delayEnabled"
-      (onValueChanged)="onDelayChange($event.value)"
-    ></dx-check-box>
-    <dx-check-box
-      data-testid="demo-fail"
-      text="Ошибка сервера"
-      [value]="failEnabled"
-      (onValueChanged)="onFailChange($event.value)"
-    ></dx-check-box>
-    <dx-button
-      data-testid="reset-settings"
-      text="Сбросить настройки"
-      stylingMode="outlined"
-      (onClick)="onReset()"
-    ></dx-button>
-  </div>
   <div class="grid-page__group" id="export">
-    <span class="grid-page__label">Экспорт</span>
-    <dx-button
-      data-testid="export-server-xlsx"
-      text="Excel (сервер)"
-      icon="exportxlsx"
-      hint="Все строки под фильтром, файл строит сервер"
+    <dx-drop-down-button
+      data-testid="export-menu"
+      text="Экспорт"
+      icon="export"
       stylingMode="outlined"
-      [disabled]="exportBusy"
-      (onClick)="onExport('server', 'xlsx')"
-    ></dx-button>
-    <dx-button
-      data-testid="export-server-pdf"
-      text="PDF (сервер)"
-      icon="exportpdf"
-      hint="Все строки под фильтром, файл строит сервер"
-      stylingMode="outlined"
-      [disabled]="exportBusy"
-      (onClick)="onExport('server', 'pdf')"
-    ></dx-button>
-    <dx-button
-      data-testid="export-grid-xlsx"
-      text="Excel (штатно)"
-      icon="exportxlsx"
-      hint="exportDataGrid: грид сам загружает все строки в браузер"
-      stylingMode="outlined"
-      [disabled]="exportBusy"
-      (onClick)="onExport('grid', 'xlsx')"
-    ></dx-button>
-    <dx-button
-      data-testid="export-grid-pdf"
-      text="PDF (штатно)"
-      icon="exportpdf"
-      hint="exportDataGrid: грид сам загружает все строки в браузер"
-      stylingMode="outlined"
-      [disabled]="exportBusy"
-      (onClick)="onExport('grid', 'pdf')"
-    ></dx-button>
+      [dropDownOptions]="menuOptions"
+      dropDownContentTemplate="exportMenu"
+    >
+      <div *dxTemplate="let menu of 'exportMenu'" class="grid-page__menu">
+        <dx-button
+          data-testid="export-server-xlsx"
+          text="Excel (сервер)"
+          icon="exportxlsx"
+          hint="Все строки под фильтром, файл строит сервер"
+          stylingMode="text"
+          [disabled]="exportBusy"
+          (onClick)="onExport('server', 'xlsx')"
+        ></dx-button>
+        <dx-button
+          data-testid="export-server-pdf"
+          text="PDF (сервер)"
+          icon="exportpdf"
+          hint="Все строки под фильтром, файл строит сервер"
+          stylingMode="text"
+          [disabled]="exportBusy"
+          (onClick)="onExport('server', 'pdf')"
+        ></dx-button>
+        <dx-button
+          data-testid="export-grid-xlsx"
+          text="Excel (штатно)"
+          icon="exportxlsx"
+          hint="exportDataGrid: грид сам загружает все строки в браузер"
+          stylingMode="text"
+          [disabled]="exportBusy"
+          (onClick)="onExport('grid', 'xlsx')"
+        ></dx-button>
+        <dx-button
+          data-testid="export-grid-pdf"
+          text="PDF (штатно)"
+          icon="exportpdf"
+          hint="exportDataGrid: грид сам загружает все строки в браузер"
+          stylingMode="text"
+          [disabled]="exportBusy"
+          (onClick)="onExport('grid', 'pdf')"
+        ></dx-button>
+      </div>
+    </dx-drop-down-button>
     <span
       *ngIf="exporting"
       class="grid-page__export-status"
@@ -119,6 +106,36 @@
         (onClick)="onExportCancel()"
       ></dx-button>
     </span>
+  </div>
+  <div class="grid-page__group" id="loading">
+    <dx-drop-down-button
+      data-testid="more-menu"
+      text="Ещё"
+      stylingMode="outlined"
+      [dropDownOptions]="menuOptions"
+      dropDownContentTemplate="moreMenu"
+    >
+      <div *dxTemplate="let menu of 'moreMenu'" class="grid-page__menu">
+        <dx-check-box
+          data-testid="demo-delay"
+          text="Задержка ответа"
+          [value]="delayEnabled"
+          (onValueChanged)="onDelayChange($event.value)"
+        ></dx-check-box>
+        <dx-check-box
+          data-testid="demo-fail"
+          text="Ошибка сервера"
+          [value]="failEnabled"
+          (onValueChanged)="onFailChange($event.value)"
+        ></dx-check-box>
+        <dx-button
+          data-testid="reset-settings"
+          text="Сбросить настройки"
+          stylingMode="text"
+          (onClick)="onReset()"
+        ></dx-button>
+      </div>
+    </dx-drop-down-button>
   </div>
 </section>
 
@@ -176,6 +193,7 @@
     [allowColumnReordering]="true"
     [allowColumnResizing]="true"
     [columnResizingMode]="columnResizingMode"
+    [columnMinWidth]="columnMinWidth"
     [columnChooser]="columnChooser"
     [sorting]="sorting"
     [filterPanel]="filterPanel"

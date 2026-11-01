@@ -1,17 +1,23 @@
 .metrics {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 24px;
-  margin: 0 0 12px;
+  gap: 0 16px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.metrics__item {
+  display: flex;
+  gap: 4px;
 }
 
 .metrics__item dt {
-  font-size: 12px;
   color: rgba(0, 0, 0, 0.6);
 }
 
 .metrics__item dd {
   margin: 0;
-  font-size: 18px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }

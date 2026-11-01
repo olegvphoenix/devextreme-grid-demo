@@ -1,13 +1,5 @@
-<h1>Сохранённые настройки</h1>
-
-<p class="settings__hint">
-  Содержимое LocalStorage приложения: ключи с префиксом
-  <code>dxgrid-demo:</code> и их значения как они сохранены. Грид пишет своё
-  состояние в <code>dxgrid-demo:state</code>, фильтры страницы —
-  в <code>dxgrid-demo:filters</code>.
-</p>
-
-<div class="settings__toolbar">
+<div class="settings__head">
+  <h1>Сохранённые настройки</h1>
   <dx-button
     data-testid="settings-refresh"
     text="Обновить"
@@ -25,37 +17,32 @@
   ></dx-button>
 </div>
 
+<p class="settings__hint">
+  Содержимое LocalStorage приложения: ключи с префиксом
+  <code>dxgrid-demo:</code> и их значения.
+</p>
+
 <p *ngIf="rows.length === 0" class="settings__empty" data-testid="settings-empty">
   Сохранённых настроек нет: откройте основную страницу и измените что-нибудь
   в гриде.
 </p>
 
-<table *ngIf="rows.length > 0" class="settings__table" data-testid="settings-table">
-  <thead>
-    <tr>
-      <th class="settings__key-column">Ключ</th>
-      <th>Значение</th>
-      <th class="settings__action-column"></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr
-      *ngFor="let row of rows; trackBy: trackByKey"
-      data-testid="settings-row"
-    >
-      <td class="settings__key" data-testid="settings-key">{{ row.key }}</td>
-      <td>
-        <pre class="settings__value" data-testid="settings-value">{{ row.value }}</pre>
-      </td>
-      <td class="settings__action">
-        <dx-button
-          data-testid="settings-remove"
-          text="Удалить ключ"
-          icon="close"
-          stylingMode="text"
-          (onClick)="remove(row.key)"
-        ></dx-button>
-      </td>
-    </tr>
-  </tbody>
-</table>
+<div *ngIf="rows.length > 0" class="settings__list" data-testid="settings-table">
+  <section
+    *ngFor="let row of rows; trackBy: trackByKey"
+    class="settings__card"
+    data-testid="settings-row"
+  >
+    <header class="settings__card-head">
+      <code class="settings__key" data-testid="settings-key">{{ row.key }}</code>
+      <dx-button
+        data-testid="settings-remove"
+        icon="close"
+        hint="Удалить ключ"
+        stylingMode="text"
+        (onClick)="remove(row.key)"
+      ></dx-button>
+    </header>
+    <pre class="settings__value" data-testid="settings-value">{{ row.value }}</pre>
+  </section>
+</div>

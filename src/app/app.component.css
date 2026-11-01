@@ -7,13 +7,14 @@
 .app-menu {
   display: flex;
   flex: 0 0 auto;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 4px;
+  padding: 2px 8px;
   border-bottom: 1px solid #e0e0e0;
 }
 
 .app-menu__item {
-  padding: 8px 12px;
+  padding: 4px 10px;
+  font-size: 13px;
   text-decoration: none;
   color: inherit;
   border-radius: 4px;
@@ -30,6 +31,6 @@
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
-  padding: 16px;
+  padding: 6px 8px;
   overflow: auto;
 }

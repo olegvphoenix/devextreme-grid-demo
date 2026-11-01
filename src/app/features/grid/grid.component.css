@@ -8,15 +8,23 @@
 .grid-page__toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 24px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 4px 20px;
+  margin-bottom: 4px;
 }
 
 .grid-page__group {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+}
+
+.grid-page__menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
 }
 
 .grid-page__label {
@@ -41,8 +49,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 12px;
-  padding: 8px 12px;
+  margin-bottom: 4px;
+  padding: 4px 12px;
   border: 1px solid #d32f2f;
   border-radius: 4px;
   background: #fdecea;
@@ -52,7 +60,44 @@
 /* Грид занимает остаток страницы и прокручивается внутри: FPS меряется на 500 строках. */
 .grid-page__grid {
   flex: 1 1 auto;
-  min-height: 300px;
+  min-height: 240px;
+}
+
+/*
+ * Компактная тема оставляет строке 40 px, заголовку 45, пагинатору 56.
+ * Здесь данных больше: у ячеек меньше отступы, бейджи и чипы высотой 20 px влезают.
+ */
+.grid-page__grid ::ng-deep .dx-datagrid .dx-row > td {
+  padding: 4px 6px;
+}
+
+.grid-page__grid ::ng-deep .dx-datagrid-headers .dx-header-row > td {
+  padding: 6px;
+}
+
+.grid-page__grid ::ng-deep .dx-datagrid-pager {
+  padding: 3px 8px;
+}
+
+.grid-page__grid ::ng-deep .dx-pager .dx-page,
+.grid-page__grid ::ng-deep .dx-pager .dx-page-size {
+  padding: 4px 8px;
+}
+
+.grid-page__grid ::ng-deep .dx-datagrid-header-panel .dx-toolbar {
+  margin-bottom: 0;
+}
+
+/* Строка итогов: соседние ячейки пусты, длинное значение занимает их, а не обрезается. */
+.grid-page__grid ::ng-deep .dx-datagrid-total-footer td,
+.grid-page__grid ::ng-deep .dx-group-row td {
+  overflow: visible;
+}
+
+.grid-page__grid ::ng-deep .dx-datagrid-summary-item {
+  overflow: visible;
+  text-overflow: clip;
+  font-size: 12px;
 }
 
 /* В режиме ячеек Shift+клик строит прямоугольник, а не выделяет текст. */
@@ -70,7 +115,7 @@
 .grid-header {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   max-width: 100%;
   vertical-align: middle;
 }
@@ -86,7 +131,7 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 20px;
+  width: 16px;
   height: 20px;
   padding: 0;
   border: 0;
@@ -102,7 +147,7 @@
 }
 
 .grid-header__filter .dx-icon {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .grid-header__filter--active,

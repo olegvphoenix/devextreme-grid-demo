@@ -13,14 +13,16 @@ import {
   STATUS_NAMES,
 } from '../../models/production-record.model';
 import { DATE_FORMAT } from '../../shared/date-format';
-import { ColumnWidths, WidthMode } from './grid-state';
+import { ColumnWidths, FitWidths, WidthMode } from './grid-state';
 
 export interface GridColumnDef {
   field: Extract<keyof ProductionRecord, string>;
   caption: string;
   kind: ColumnKind;
-  /** Ширина в режиме «С прокруткой», px; в режиме «По ширине» не задаётся. */
+  /** Ширина в режиме «С прокруткой», px. */
   width: number;
+  /** Доля страницы в режиме «По ширине», %. */
+  fitPercent: number;
   format?: string;
 }
 
@@ -28,23 +30,43 @@ const WEIGHT_FORMAT = '#,##0.0';
 const INTEGER_FORMAT = '#,##0';
 
 export const GRID_COLUMNS: GridColumnDef[] = [
-  { field: 'id', caption: 'Идентификатор', kind: 'number', width: 120 },
+  { field: 'id', caption: 'ID', kind: 'number', width: 120, fitPercent: 4 },
   {
     field: 'date',
     caption: 'Дата',
     kind: 'date',
     width: 110,
+    fitPercent: 6,
     format: DATE_FORMAT,
   },
-  { field: 'plant', caption: 'Завод', kind: 'string', width: 140 },
-  { field: 'line', caption: 'Линия', kind: 'string', width: 130 },
-  { field: 'product', caption: 'Продукт', kind: 'string', width: 160 },
-  { field: 'batch', caption: 'Партия', kind: 'string', width: 120 },
+  {
+    field: 'plant',
+    caption: 'Завод',
+    kind: 'string',
+    width: 140,
+    fitPercent: 7,
+  },
+  { field: 'line', caption: 'Линия', kind: 'string', width: 130, fitPercent: 6 },
+  {
+    field: 'product',
+    caption: 'Продукт',
+    kind: 'string',
+    width: 160,
+    fitPercent: 8,
+  },
+  {
+    field: 'batch',
+    caption: 'Партия',
+    kind: 'string',
+    width: 120,
+    fitPercent: 5,
+  },
   {
     field: 'netWeight',
     caption: 'Нетто, кг',
     kind: 'number',
     width: 110,
+    fitPercent: 7,
     format: WEIGHT_FORMAT,
   },
   {
@@ -52,13 +74,15 @@ export const GRID_COLUMNS: GridColumnDef[] = [
     caption: 'Брутто, кг',
     kind: 'number',
     width: 110,
+    fitPercent: 7,
     format: WEIGHT_FORMAT,
   },
   {
     field: 'qty',
-    caption: 'Количество',
+    caption: 'Кол-во',
     kind: 'number',
     width: 120,
+    fitPercent: 7,
     format: INTEGER_FORMAT,
   },
   {
@@ -66,11 +90,36 @@ export const GRID_COLUMNS: GridColumnDef[] = [
     caption: 'Код маркировки',
     kind: 'string',
     width: 280,
+    fitPercent: 7,
   },
-  { field: 'ean13', caption: 'Штрихкод EAN13', kind: 'string', width: 150 },
-  { field: 'status', caption: 'Статус', kind: 'enum', width: 130 },
-  { field: 'operator', caption: 'Оператор', kind: 'string', width: 150 },
-  { field: 'labels', caption: 'Ярлыки', kind: 'labels', width: 180 },
+  {
+    field: 'ean13',
+    caption: 'EAN13',
+    kind: 'string',
+    width: 150,
+    fitPercent: 6,
+  },
+  {
+    field: 'status',
+    caption: 'Статус',
+    kind: 'enum',
+    width: 130,
+    fitPercent: 7,
+  },
+  {
+    field: 'operator',
+    caption: 'Оператор',
+    kind: 'string',
+    width: 150,
+    fitPercent: 7,
+  },
+  {
+    field: 'labels',
+    caption: 'Ярлыки',
+    kind: 'labels',
+    width: 180,
+    fitPercent: 4,
+  },
 ];
 
 type AggregateField = 'netWeight' | 'grossWeight' | 'qty';
@@ -92,7 +141,7 @@ function aggregateItem(def: AggregateDef): SummaryGroupItem & SummaryTotalItem {
   return {
     column: def.column,
     summaryType: def.summaryType,
-    displayFormat: def.summaryType === 'sum' ? 'Сумма: {0}' : 'Среднее: {0}',
+    displayFormat: def.summaryType === 'sum' ? '∑ {0}' : 'ср. {0}',
     valueFormat: def.column === 'qty' ? INTEGER_FORMAT : WEIGHT_FORMAT,
   };
 }
@@ -100,6 +149,7 @@ function aggregateItem(def: AggregateDef): SummaryGroupItem & SummaryTotalItem {
 /**
  * Агрегаты групп и итогов; считает сервер (`remoteOperations.summary`).
  * Число строк группы — в заголовке группы, остальное — под своей колонкой.
+ * Итоги в одну строку: подвал не должен отнимать высоту у данных.
  */
 export const GRID_SUMMARY: Summary = {
   groupItems: [
@@ -116,11 +166,15 @@ export const GRID_SUMMARY: Summary = {
   totalItems: [
     {
       column: 'id',
+      showInColumn: 'product',
       summaryType: 'count',
       displayFormat: 'Всего строк: {0}',
       valueFormat: INTEGER_FORMAT,
     },
-    ...AGGREGATES.map(aggregateItem),
+    ...AGGREGATES.filter((def) => def.summaryType === 'sum').map((def) => ({
+      ...aggregateItem(def),
+      valueFormat: INTEGER_FORMAT,
+    })),
   ],
 };
 
@@ -136,6 +190,16 @@ export function defaultScrollWidths(defs: GridColumnDef[]): ColumnWidths {
   const widths: ColumnWidths = {};
   defs.forEach((def) => (widths[def.field] = def.width));
   return widths;
+}
+
+export function defaultFitWidths(defs: GridColumnDef[]): FitWidths {
+  const widths: FitWidths = {};
+  defs.forEach((def) => (widths[def.field] = fitWidth(def)));
+  return widths;
+}
+
+function fitWidth(def: GridColumnDef): string {
+  return `${def.fitPercent}%`;
 }
 
 /**
@@ -216,10 +280,8 @@ export function toDxColumns(
       dataType: dataTypeOf(def.kind),
       allowHeaderFiltering: false,
       headerCellTemplate: HEADER_CELL_TEMPLATE,
+      width: widthMode === 'scroll' ? def.width : fitWidth(def),
     };
-    if (widthMode === 'scroll') {
-      column.width = def.width;
-    }
     if (def.format !== undefined) {
       column.format = def.format;
     }

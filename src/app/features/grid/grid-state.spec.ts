@@ -4,6 +4,7 @@ import {
   DEFAULT_PAGE_SETTINGS,
   detachWidths,
   DxGridState,
+  fillMissingWidths,
   limitSelectedRowKeys,
   MAX_RESTORED_SELECTION,
   readGridState,
@@ -127,6 +128,31 @@ describe('grid-state', () => {
         { dataField: 'id', width: 40 },
         { dataField: 'plant', width: 150 },
       ]);
+    });
+
+    it('fillMissingWidths дополняет только колонки без ширины: перетащенная остаётся', () => {
+      const filled = fillMissingWidths(
+        stateWith([{ dataField: 'id', width: 40 }, { dataField: 'plant' }]),
+        { id: '4%', plant: '7%' }
+      );
+      expect(filled.columns).toEqual([
+        { dataField: 'id', width: 40 },
+        { dataField: 'plant', width: '7%' },
+      ]);
+    });
+
+    it('fillMissingWidths оставляет проценты: так грид сохраняет ширину, заданную пользователем', () => {
+      const filled = fillMissingWidths(
+        stateWith([{ dataField: 'plant', width: '12.071%' }]),
+        { plant: '7%' }
+      );
+      expect(filled.columns).toEqual([{ dataField: 'plant', width: '12.071%' }]);
+    });
+
+    it('fillMissingWidths не меняет состояние без колонок', () => {
+      expect(fillMissingWidths({ pageIndex: 1 }, { id: '4%' })).toEqual({
+        pageIndex: 1,
+      });
     });
   });
 

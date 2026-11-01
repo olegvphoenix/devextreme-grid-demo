@@ -105,7 +105,7 @@ describe('rowTable', () => {
   it('заголовок из подписей видимых колонок, строка из отображаемых значений', () => {
     const columns = [byField('date'), byField('status'), byField('qty')];
     expect(rowTable([record], columns)).toEqual({
-      header: ['Дата', 'Статус', 'Количество'],
+      header: ['Дата', 'Статус', 'Кол-во'],
       rows: [['09.05.2021', 'Агрегирован', '42 000']],
     });
   });
