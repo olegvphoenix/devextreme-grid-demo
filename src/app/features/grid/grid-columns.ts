@@ -1,4 +1,4 @@
-import DevExpress from 'devextreme/bundles/dx.all';
+import type DevExpress from 'devextreme/bundles/dx.all';
 import { DataType } from 'devextreme/common';
 import {
   Summary,
