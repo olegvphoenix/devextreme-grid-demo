@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using DevExtreme.AspNet.Data;
@@ -97,6 +98,57 @@ public class RowsApiTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task MalformedSortJsonIs400WithMessage()
     {
         var response = await ApiClient.PostForm(_client, "/api/rows/query", ("dataset", "1000"), ("take", "1"), ("sort", "[{selector:date}]"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        Assert.False(string.IsNullOrEmpty(json.GetProperty("message").GetString()));
+    }
+
+    private static string OrChain(string field, IEnumerable<string> values) =>
+        "[" + string.Join(",\"or\",", values.Select(v => $"[\"{field}\",\"=\",{v}]")) + "]";
+
+    [Fact]
+    public async Task FiveThousandEqualsOperandsOnMarkingCodeReturnTheMatchingRowsOfTheMillionSet()
+    {
+        var rows = _factory.Services.GetRequiredService<MockServer.Data.DatasetStore>().Get(1000000);
+        var codes = rows.Where((_, i) => i % 200 == 0).Take(5000).Select(r => r.MarkingCode).ToArray();
+        var expected = codes.ToHashSet(StringComparer.Ordinal);
+
+        var sw = Stopwatch.StartNew();
+        var json = await Query(("dataset", "1000000"), ("skip", "0"), ("take", "500"), ("requireTotalCount", "true"),
+            ("sort", "[{\"selector\":\"id\",\"desc\":false}]"),
+            ("totalSummary", "[{\"summaryType\":\"count\"},{\"selector\":\"qty\",\"summaryType\":\"sum\"}]"),
+            ("filter", OrChain("markingCode", codes.Select(c => $"\"{c}\""))));
+        sw.Stop();
+
+        Assert.Equal(5000, json.GetProperty("totalCount").GetInt32());
+        Assert.Equal(5000, json.GetProperty("summary")[0].GetInt32());
+        var page = json.GetProperty("data").EnumerateArray().Select(r => r.GetProperty("markingCode").GetString()!).ToList();
+        Assert.Equal(500, page.Count);
+        Assert.All(page, code => Assert.Contains(code, expected));
+        Assert.True(sw.ElapsedMilliseconds < 15000, $"the filter took {sw.ElapsedMilliseconds} ms");
+    }
+
+    [Fact]
+    public async Task SixThousandOperandsAreTheLimit()
+    {
+        var atLimit = await Query(("dataset", "1000"), ("take", "1"), ("requireTotalCount", "true"),
+            ("filter", OrChain("id", Enumerable.Range(1, 6000).Select(i => i.ToString()))));
+        Assert.Equal(1000, atLimit.GetProperty("totalCount").GetInt32());
+
+        var overLimit = await ApiClient.PostForm(_client, "/api/rows/query", ("dataset", "1000"), ("take", "1"),
+            ("filter", OrChain("id", Enumerable.Range(1, 6001).Select(i => i.ToString()))));
+        Assert.Equal(HttpStatusCode.BadRequest, overLimit.StatusCode);
+        var json = JsonDocument.Parse(await overLimit.Content.ReadAsStringAsync()).RootElement;
+        Assert.False(string.IsNullOrEmpty(json.GetProperty("message").GetString()));
+    }
+
+    [Fact]
+    public async Task AFormValueAboveTwoMegabytesIs400WithMessage()
+    {
+        var filter = $"[\"plant\",\"=\",\"{new string('x', 2 * 1024 * 1024)}\"]";
+
+        var response = await ApiClient.PostForm(_client, "/api/rows/query", ("dataset", "1000"), ("take", "1"), ("filter", filter));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;

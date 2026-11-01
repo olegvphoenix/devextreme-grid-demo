@@ -68,7 +68,8 @@ public static class ColumnEndpoints
     {
         var column = FindColumn(form["field"], "field");
         var (dataset, options) = LoadOptionsReader.ReadFilterOnly(form);
-        var filtered = DataSourceLoader.Load(store.Get(dataset).AsQueryable(), options).data;
+        var source = ValueListFilter.Apply(store.Get(dataset).AsQueryable(), options);
+        var filtered = DataSourceLoader.Load(source, options).data;
         return (column, filtered.Cast<ProductionRecord>());
     }
 

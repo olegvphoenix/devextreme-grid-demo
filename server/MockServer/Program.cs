@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http.Features;
 using MockServer.Api;
 using MockServer.Data;
 
@@ -19,6 +20,8 @@ if (args.Length > 0 && args[0] == "generate")
 }
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = RequestLimits.BodyBytes);
+builder.Services.Configure<FormOptions>(options => options.ValueLengthLimit = RequestLimits.FormValueBytes);
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new DateJsonConverter()));
 builder.Services.AddSingleton(new DatasetStore(DateOnly.FromDateTime(DateTime.Now)));
@@ -33,12 +36,15 @@ app.UseExceptionHandler(errors => errors.Run(async context =>
     context.Response.StatusCode = error switch
     {
         BadHttpRequestException bad => bad.StatusCode,
-        JsonException => StatusCodes.Status400BadRequest,
+        JsonException or InvalidDataException => StatusCodes.Status400BadRequest,
         _ => StatusCodes.Status500InternalServerError,
     };
-    var message = error is BadHttpRequestException or JsonException
-        ? error.Message
-        : "Внутренняя ошибка сервера";
+    var message = error switch
+    {
+        BadHttpRequestException or JsonException => error.Message,
+        InvalidDataException => RequestLimits.TooLargeMessage,
+        _ => "Внутренняя ошибка сервера",
+    };
     await context.Response.WriteAsJsonAsync(new { message });
 }));
 app.UseRateLimiter();

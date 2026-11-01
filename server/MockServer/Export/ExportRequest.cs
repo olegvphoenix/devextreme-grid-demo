@@ -46,8 +46,11 @@ internal sealed class ExportRequest
         return new ExportRequest(columns, dataset, options);
     }
 
-    public IEnumerable<ProductionRecord> Rows(DatasetStore store) =>
-        DataSourceLoader.Load(store.Get(_dataset).AsQueryable(), _options).data.Cast<ProductionRecord>();
+    public IEnumerable<ProductionRecord> Rows(DatasetStore store)
+    {
+        var source = ValueListFilter.Apply(store.Get(_dataset).AsQueryable(), _options);
+        return DataSourceLoader.Load(source, _options).data.Cast<ProductionRecord>();
+    }
 
     private static IReadOnlyList<ExportColumn> ReadColumns(string? json)
     {

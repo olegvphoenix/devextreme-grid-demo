@@ -14,6 +14,7 @@ public static class RowsQuery
 {
     public static LoadResult Load(IQueryable<ProductionRecord> source, DataSourceLoadOptionsBase options)
     {
+        source = ValueListFilter.Apply(source, options);
         if (!NeedsSeparateSummary(options))
             return DataSourceLoader.Load(source, options);
 

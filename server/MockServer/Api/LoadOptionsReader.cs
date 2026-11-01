@@ -31,6 +31,9 @@ public static class LoadOptionsReader
     {
         var options = new DataSourceLoadOptionsBase { StringToLower = true };
         DataSourceLoadOptionsParser.Parse(options, value);
+        var operands = ValueListFilter.CountOperands(options.Filter);
+        if (operands > ValueListFilter.MaxOperands)
+            throw new BadHttpRequestException($"В фильтре {operands} условий, допускается не более {ValueListFilter.MaxOperands}");
         return (ReadDataset(form["dataset"]), options);
     }
 }
