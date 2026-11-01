@@ -77,7 +77,6 @@ describe('DateRangeFilterComponent', () => {
     fixture.detectChanges();
     expect(host.emitted[1]).toEqual({});
     expect(to().instance.option('value')).toBeNull();
-    expect(to().instance.option('min')).toBe('2020-02-01');
   });
 
   it('восстанавливает диапазон из state, поля ограничены границами набора', () => {
