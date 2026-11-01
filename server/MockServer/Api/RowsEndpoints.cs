@@ -40,11 +40,10 @@ public static class RowsEndpoints
     private static IResult UpdateLabels(int id, string? dataset, LabelsBody body, DatasetStore store)
     {
         var size = LoadOptionsReader.ReadDataset(dataset);
-        if (body.Labels is null || body.Labels.Any(l => string.IsNullOrWhiteSpace(l) || l.Contains('|')))
-            throw new BadHttpRequestException("Поле labels обязательно: непустые строки без символа |");
+        LabelRules.Validate(body.Labels);
         try
         {
-            return Results.Ok(store.UpdateLabels(size, id, body.Labels));
+            return Results.Ok(store.UpdateLabels(size, id, body.Labels!));
         }
         catch (KeyNotFoundException e)
         {

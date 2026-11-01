@@ -65,6 +65,41 @@ public class LabelsApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    public static IEnumerable<object[]> RejectedLabelSets()
+    {
+        yield return new object[] { Enumerable.Range(1, 11).Select(i => $"я{i}").ToArray() };
+        yield return new object[] { new[] { new string('я', 33) } };
+        yield return new object[] { new[] { "а\u0001б" } };
+        yield return new object[] { new[] { "а\tб" } };
+        yield return new object[] { new[] { "=HYPERLINK(\"http://x\")" } };
+        yield return new object[] { new[] { "+1" } };
+        yield return new object[] { new[] { "-1" } };
+        yield return new object[] { new[] { "@a" } };
+    }
+
+    [Theory]
+    [MemberData(nameof(RejectedLabelSets))]
+    public async Task TooManyTooLongControlOrFormulaLabelsAre400WithARussianMessage(string[] labels)
+    {
+        var response = await _client.PutAsJsonAsync("/api/rows/3/labels?dataset=1000", new { labels });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var message = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("message").GetString();
+        Assert.Matches("[а-яА-Я]", message);
+    }
+
+    [Fact]
+    public async Task TenLabelsOfThirtyTwoCharactersAreAccepted()
+    {
+        var labels = Enumerable.Range(0, 10).Select(i => new string((char)('а' + i), 32)).ToArray();
+
+        var response = await _client.PutAsJsonAsync("/api/rows/4/labels?dataset=1000", new { labels });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var record = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(labels, record.GetProperty("labels").EnumerateArray().Select(l => l.GetString()));
+    }
+
     [Fact]
     public void ConcurrentLabelUpdatesNeverLeaveATornPair()
     {
