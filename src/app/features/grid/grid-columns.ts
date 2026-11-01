@@ -70,6 +70,11 @@ export const GRID_COLUMNS: GridColumnDef[] = [
 
 /** Имя `dxTemplate` заголовка на странице: подпись и кнопка фильтра. */
 export const HEADER_CELL_TEMPLATE = 'headerCell';
+/** Имена `dxTemplate` ячеек на странице: бейдж статуса и чипы ярлыков. */
+export const STATUS_CELL_TEMPLATE = 'statusCell';
+export const LABELS_CELL_TEMPLATE = 'labelsCell';
+
+export type RowAction = 'open' | 'start' | 'close';
 
 export function defaultScrollWidths(defs: GridColumnDef[]): ColumnWidths {
   const widths: ColumnWidths = {};
@@ -83,6 +88,50 @@ export function defaultScrollWidths(defs: GridColumnDef[]): ColumnWidths {
  * («Excessive stack depth»). Импорт только для типа, в сборку не попадает.
  */
 export type DxColumn = DevExpress.ui.dxDataGridColumn;
+export type DxColumnButton = DevExpress.ui.dxDataGridColumnButton;
+
+interface RowActionDef {
+  name: RowAction;
+  hint: string;
+  icon: string;
+}
+
+const ROW_ACTIONS: RowActionDef[] = [
+  { name: 'open', hint: 'Открыть', icon: 'find' },
+  { name: 'start', hint: 'В работу', icon: 'runner' },
+  { name: 'close', hint: 'Закрыть', icon: 'check' },
+];
+
+/**
+ * Колонка действий: `type: 'buttons'`, без поля данных — её нет в выборе
+ * колонок, в копировании и в экспорте. Закреплена справа, ширина под три
+ * иконки; обработчик получает действие и ключ записи.
+ */
+export function actionsColumn(
+  onAction: (action: RowAction, id: number) => void
+): DxColumn {
+  return {
+    type: 'buttons',
+    name: 'actions',
+    caption: 'Действия',
+    width: 100,
+    fixed: true,
+    fixedPosition: 'right',
+    allowResizing: false,
+    allowExporting: false,
+    showInColumnChooser: false,
+    buttons: ROW_ACTIONS.map((action) => ({
+      name: action.name,
+      hint: action.hint,
+      icon: action.icon,
+      onClick: (e) => {
+        if (e.row !== undefined) {
+          onAction(action.name, e.row.key);
+        }
+      },
+    })),
+  };
+}
 
 /**
  * Фильтр ярлыков идёт по служебному полю `labelsKey` (`|а|б|`, оператор
@@ -124,9 +173,11 @@ export function toDxColumns(
       );
     }
     if (def.kind === 'enum') {
+      column.cellTemplate = STATUS_CELL_TEMPLATE;
       column.customizeText = (cell) => statusName(cell.value);
     }
     if (def.kind === 'labels') {
+      column.cellTemplate = LABELS_CELL_TEMPLATE;
       column.allowSorting = false;
       column.allowGrouping = false;
       column.customizeText = (cell) => labelsText(cell.value);

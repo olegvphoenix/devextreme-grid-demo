@@ -150,6 +150,16 @@
         <i class="dx-icon dx-icon-filter"></i>
       </button>
     </div>
+    <app-status-badge
+      *dxTemplate="let cell of 'statusCell'"
+      [status]="cell.value"
+    ></app-status-badge>
+    <app-labels-cell
+      *dxTemplate="let cell of 'labelsCell'"
+      [id]="cell.row.key"
+      [labels]="cell.value"
+      (labelsChange)="onLabelsChange(cell.row.key, $event)"
+    ></app-labels-cell>
   </dx-data-grid>
 </div>
 

@@ -1,0 +1,81 @@
+/* Одна строка высотой в строку текста ячейки: высота строки грида не меняется. */
+.labels-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.labels-cell--busy {
+  opacity: 0.6;
+}
+
+.labels-cell__chip {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  height: 20px;
+  padding: 0 2px 0 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.labels-cell__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.labels-cell__button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.labels-cell__button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.labels-cell__button:disabled {
+  cursor: default;
+}
+
+.labels-cell__button .dx-icon {
+  font-size: 14px;
+}
+
+.labels-cell__add {
+  margin-left: auto;
+}
+
+.labels-cell__input {
+  flex: 1 1 60px;
+  min-width: 60px;
+  height: 20px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.labels-cell__input:focus {
+  border-bottom-color: #03a9f4;
+}

@@ -17,6 +17,7 @@ import {
   Sorting,
   StateStoring,
 } from 'devextreme/common/grids';
+import CustomStore from 'devextreme/data/custom_store';
 import DataSource from 'devextreme/data/data_source';
 import {
   CellClickEvent,
@@ -71,10 +72,12 @@ import {
   isEditableTarget,
 } from './clipboard.service';
 import {
+  actionsColumn,
   defaultScrollWidths,
   DxColumn,
   GRID_COLUMNS,
   GridColumnDef,
+  RowAction,
   toDxColumns,
 } from './grid-columns';
 import { GridFilterStateService } from './grid-filter-state.service';
@@ -99,6 +102,12 @@ const PAGE_SIZES = [20, 50, 100, 500];
 const SORT_OPTION = /^columns\[\d+\]\.(sortOrder|sortIndex)$/;
 const NOTIFY_SUCCESS_MS = 1500;
 const NOTIFY_ERROR_MS = 3000;
+/** Кнопки действий данные не меняют: только уведомление с id записи. */
+const ROW_ACTION_TEXTS: Record<RowAction, (id: number) => string> = {
+  open: (id) => `Открыть запись ${id}`,
+  start: (id) => `Запись ${id} передана в работу`,
+  close: (id) => `Запись ${id} закрыта`,
+};
 
 interface WidthModeItem {
   value: WidthMode;
@@ -181,6 +190,7 @@ export class GridComponent implements OnInit, OnDestroy {
   filterTarget: HTMLElement | null = null;
   filterVisible = false;
 
+  private readonly store: CustomStore<ProductionRecord, number>;
   private readonly filterSubscription: Subscription;
   private stopFps: (() => void) | null = null;
   private resetting = false;
@@ -202,10 +212,15 @@ export class GridComponent implements OnInit, OnDestroy {
       this.filterState = state;
       this.filterValue = buildFilterExpression(state);
     });
+    this.store = createGridStore(this.data, (e) => this.onLoadError(e));
     this.dataSource = new DataSource<ProductionRecord, number>({
-      store: createGridStore(this.data, (e) => this.onLoadError(e)),
+      store: this.store,
     });
-    this.dataSource.on('changed', () => {
+    /** `push` строки приходит с `changes`: это не перезагрузка, выделение остаётся. */
+    this.dataSource.on('changed', (e?: { changes?: unknown }) => {
+      if (e?.changes !== undefined) {
+        return;
+      }
       this.error = null;
       this.cells.clear();
     });
@@ -233,7 +248,10 @@ export class GridComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.data.dataset = this.settings.dataset;
-    this.columns = toDxColumns(GRID_COLUMNS, this.settings.widthMode);
+    this.columns = [
+      ...toDxColumns(GRID_COLUMNS, this.settings.widthMode),
+      actionsColumn((action, id) => this.onRowAction(action, id)),
+    ];
   }
 
   ngOnDestroy(): void {
@@ -384,6 +402,19 @@ export class GridComponent implements OnInit, OnDestroy {
 
   onCopy(): void {
     void this.copySelection();
+  }
+
+  onRowAction(action: RowAction, id: number): void {
+    notify(ROW_ACTION_TEXTS[action](id), 'info', NOTIFY_SUCCESS_MS);
+  }
+
+  /**
+   * Сохранённые ярлыки попадают в строку через `push`: грид перерисовывает
+   * одну строку без запроса, страница и выбор остаются. `labelsKey` в строке
+   * не обновляется — клиент его не читает, фильтр по нему считает сервер.
+   */
+  onLabelsChange(id: number, labels: string[]): void {
+    this.store.push([{ type: 'update', key: id, data: { labels } }]);
   }
 
   /** Ctrl+C внутри грида; текст в поле ввода или выделенный мышью копируется штатно. */

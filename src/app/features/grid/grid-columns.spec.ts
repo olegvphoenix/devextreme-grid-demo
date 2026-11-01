@@ -1,7 +1,12 @@
 import {
+  actionsColumn,
+  DxColumnButton,
   GRID_COLUMNS,
   HEADER_CELL_TEMPLATE,
+  LABELS_CELL_TEMPLATE,
   LABELS_KEY_COLUMN,
+  RowAction,
+  STATUS_CELL_TEMPLATE,
   toDxColumns,
 } from './grid-columns';
 
@@ -48,11 +53,88 @@ describe('toDxColumns', () => {
     expect(LABELS_KEY_COLUMN.dataField).toBe('labelsKey');
   });
 
+  it('статус и ярлыки рисуются шаблонами, текст для копирования остаётся', () => {
+    const status = byField('status');
+    expect(status.cellTemplate).toBe(STATUS_CELL_TEMPLATE);
+    expect(
+      status.customizeText!.call(status, { value: 1, valueText: '1' })
+    ).toBe('В работе');
+
+    const labels = byField('labels');
+    expect(labels.cellTemplate).toBe(LABELS_CELL_TEMPLATE);
+    expect(labels.allowSorting).toBeFalse();
+    expect(labels.allowGrouping).toBeFalse();
+    expect(
+      labels.customizeText!.call(labels, {
+        value: ['срочно', 'брак'],
+        valueText: '',
+      })
+    ).toBe('срочно, брак');
+    expect(byField('plant').cellTemplate).toBeUndefined();
+  });
+
   it('ширины задаются только в режиме прокрутки', () => {
     expect(byField('id').width).toBeUndefined();
     expect(
       toDxColumns(GRID_COLUMNS, 'scroll').find((c) => c.dataField === 'id')!
         .width
     ).toBe(120);
+  });
+});
+
+/** Тип события кнопки берётся из типа бандла: модульный с ним не сравнивается (TS2321). */
+type ButtonClick = Parameters<NonNullable<DxColumnButton['onClick']>>[0];
+
+describe('actionsColumn', () => {
+  let actions: Array<[RowAction, number]>;
+  const column = () => actionsColumn((action, id) => actions.push([action, id]));
+  const buttons = (): DxColumnButton[] =>
+    column().buttons!.map((button) => button as DxColumnButton);
+  const click = (button: DxColumnButton, key: number | undefined): void =>
+    button.onClick!({
+      row: key === undefined ? undefined : { key },
+    } as unknown as ButtonClick);
+
+  beforeEach(() => (actions = []));
+
+  it('колонка кнопок: без поля, вне списка колонок, с фиксированной шириной, закреплена справа', () => {
+    const actionsCol = column();
+    expect(actionsCol.type).toBe('buttons');
+    expect(actionsCol.dataField).toBeUndefined();
+    expect(actionsCol.name).toBe('actions');
+    expect(actionsCol.showInColumnChooser).toBeFalse();
+    expect(actionsCol.allowExporting).toBeFalse();
+    expect(actionsCol.allowResizing).toBeFalse();
+    expect(actionsCol.width).toBe(100);
+    expect(actionsCol.fixed).toBeTrue();
+    expect(actionsCol.fixedPosition).toBe('right');
+    expect(actionsCol.headerCellTemplate).toBeUndefined();
+  });
+
+  it('три кнопки с иконками и русскими подсказками', () => {
+    expect(
+      buttons().map((button) => [button.name, button.icon, button.hint])
+    ).toEqual([
+      ['open', 'find', 'Открыть'],
+      ['start', 'runner', 'В работу'],
+      ['close', 'check', 'Закрыть'],
+    ]);
+  });
+
+  it('клик по кнопке отдаёт действие и id записи', () => {
+    const [open, start, close] = buttons();
+    click(open, 7);
+    click(start, 8);
+    click(close, 9);
+    expect(actions).toEqual([
+      ['open', 7],
+      ['start', 8],
+      ['close', 9],
+    ]);
+  });
+
+  it('клик без строки ничего не делает', () => {
+    click(buttons()[0], undefined);
+    expect(actions).toEqual([]);
   });
 });

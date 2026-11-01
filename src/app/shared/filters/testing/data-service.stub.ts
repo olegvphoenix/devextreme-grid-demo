@@ -6,7 +6,13 @@ import {
   GridLoadOptions,
   GridLoadResult,
 } from '../../../models/load-options.model';
+import { ProductionRecord } from '../../../models/production-record.model';
 import { ApiError } from '../../../core/api-error';
+
+export interface LabelsCall {
+  id: number;
+  labels: string[];
+}
 
 export interface DistinctCall {
   field: string;
@@ -24,12 +30,14 @@ export class DataServiceStub {
   readonly queryCalls: GridLoadOptions[] = [];
   readonly distinctCalls: DistinctCall[] = [];
   readonly statsCalls: StatsCall[] = [];
+  readonly labelsCalls: LabelsCall[] = [];
   /** Сколько прежних запросов stats ещё были подписаны в момент каждого вызова. */
   readonly statsPendingAtCall: number[] = [];
 
   private readonly querySubjects: Subject<GridLoadResult>[] = [];
   private readonly distinctSubjects: Subject<DistinctResult>[] = [];
   private readonly statsSubjects: Subject<ColumnStats>[] = [];
+  private readonly labelsSubjects: Subject<ProductionRecord>[] = [];
   private activeQuery: Subscription | null = null;
 
   /** Как `inGroup` в DataService: новый запрос отписывает потребителя прежнего. */
@@ -117,6 +125,24 @@ export class DataServiceStub {
   failStats(message: string): void {
     const subject = this.statsSubjects[this.statsSubjects.length - 1];
     subject.error(new ApiError(500, message));
+  }
+
+  updateLabels(id: number, labels: string[]): Observable<ProductionRecord> {
+    this.labelsCalls.push({ id, labels });
+    const subject = new Subject<ProductionRecord>();
+    this.labelsSubjects.push(subject);
+    return subject.asObservable();
+  }
+
+  respondLabels(record: ProductionRecord): void {
+    const subject = this.labelsSubjects[this.labelsSubjects.length - 1];
+    subject.next(record);
+    subject.complete();
+  }
+
+  failLabels(status: number, message: string): void {
+    const subject = this.labelsSubjects[this.labelsSubjects.length - 1];
+    subject.error(new ApiError(status, message));
   }
 }
 

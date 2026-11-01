@@ -10,10 +10,18 @@ import { FiltersModule } from '../../shared/filters/filters.module';
 import { FilterChipsComponent } from './filter-chips.component';
 import { GridRoutingModule } from './grid-routing.module';
 import { GridComponent } from './grid.component';
+import { LabelsCellComponent } from './labels-cell.component';
 import { MetricsPanelComponent } from './metrics-panel.component';
+import { StatusBadgeComponent } from './status-badge.component';
 
 @NgModule({
-  declarations: [GridComponent, MetricsPanelComponent, FilterChipsComponent],
+  declarations: [
+    GridComponent,
+    MetricsPanelComponent,
+    FilterChipsComponent,
+    StatusBadgeComponent,
+    LabelsCellComponent,
+  ],
   imports: [
     CommonModule,
     DxButtonModule,

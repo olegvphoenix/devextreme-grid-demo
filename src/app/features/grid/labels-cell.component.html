@@ -1,0 +1,59 @@
+<div
+  class="labels-cell"
+  data-testid="labels-cell"
+  [class.labels-cell--busy]="busy"
+  [title]="hint"
+  (click)="stopEvent($event)"
+  (dblclick)="stopEvent($event)"
+  (pointerdown)="stopEvent($event)"
+  (keydown)="stopEvent($event)"
+>
+  <span
+    *ngFor="let label of labels; trackBy: trackByLabel"
+    class="labels-cell__chip"
+    data-testid="label-chip"
+  >
+    <span class="labels-cell__text">{{ label }}</span>
+    <button
+      type="button"
+      class="labels-cell__button"
+      data-testid="label-remove"
+      [disabled]="busy"
+      [attr.aria-label]="'Убрать ярлык: ' + label"
+      (click)="remove(label)"
+    >
+      <i class="dx-icon dx-icon-close"></i>
+    </button>
+  </span>
+  <ng-container *ngIf="editing; else addButton">
+    <input
+      #editor
+      type="text"
+      class="labels-cell__input"
+      data-testid="label-input"
+      placeholder="Новый ярлык"
+      maxlength="40"
+      autocomplete="off"
+      [attr.list]="listId"
+      [disabled]="busy"
+      (keydown)="onEditorKeyDown($event)"
+      (blur)="cancelEditing()"
+    />
+    <datalist [id]="listId">
+      <option *ngFor="let preset of presets" [value]="preset"></option>
+    </datalist>
+  </ng-container>
+  <ng-template #addButton>
+    <button
+      type="button"
+      class="labels-cell__button labels-cell__add"
+      data-testid="label-add"
+      title="Добавить ярлык"
+      aria-label="Добавить ярлык"
+      [disabled]="busy"
+      (click)="startEditing()"
+    >
+      <i class="dx-icon dx-icon-plus"></i>
+    </button>
+  </ng-template>
+</div>
