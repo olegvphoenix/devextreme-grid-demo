@@ -15,20 +15,6 @@ describe('DateRangeModel', () => {
     expect(m.from).toBe('2020-02-01');
   });
 
-  it('fromMax = to, toMin = from', () => {
-    const m = make();
-    m.setFrom('2021-01-01');
-    m.setTo('2022-01-01');
-    expect(m.fromMax).toBe('2022-01-01');
-    expect(m.toMin).toBe('2021-01-01');
-  });
-
-  it('без значений границы = min/max', () => {
-    const m = make();
-    expect(m.fromMax).toBe('2026-10-31');
-    expect(m.toMin).toBe('2020-02-01');
-  });
-
   it('зажимает вне диапазона', () => {
     const m = make();
     m.setFrom('2019-01-01');

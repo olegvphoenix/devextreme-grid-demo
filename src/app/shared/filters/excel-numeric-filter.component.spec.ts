@@ -49,12 +49,27 @@ describe('ExcelNumericFilterComponent', () => {
     fixture.detectChanges();
     expect(host.emitted).toEqual([{ from: 10 }]);
     expect(to().instance.option('value')).toBe(100);
-    expect(to().instance.option('min')).toBe(10);
+    expect(to().instance.option('min')).toBe(1);
 
     to().instance.option('value', 5);
     fixture.detectChanges();
     expect(host.emitted[1]).toEqual({ from: 5, to: 5 });
     expect(from().instance.option('value')).toBe(5);
+  });
+
+  it('«с» больше «по», набранное с клавиатуры, подтягивает «по»', () => {
+    fixture.detectChanges();
+    to().instance.option('value', 50);
+    fixture.detectChanges();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="numeric-range-from"] input.dx-texteditor-input'
+    );
+    input.value = '70';
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(host.emitted[1]).toEqual({ from: 70, to: 70 });
+    expect(from().instance.option('value')).toBe(70);
+    expect(to().instance.option('value')).toBe(70);
   });
 
   it('значение за границей зажимается', () => {

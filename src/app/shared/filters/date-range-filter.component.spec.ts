@@ -47,13 +47,26 @@ describe('DateRangeFilterComponent', () => {
     fixture.detectChanges();
     expect(host.emitted).toEqual([{ from: '2021-05-01' }]);
     expect(to().instance.option('value')).toBe('2026-10-31');
-    expect(to().instance.option('min')).toBe('2021-05-01');
 
     to().instance.option('value', '2021-03-01');
     fixture.detectChanges();
     expect(host.emitted[1]).toEqual({ from: '2021-03-01', to: '2021-03-01' });
     expect(from().instance.option('value')).toBe('2021-03-01');
-    expect(from().instance.option('max')).toBe('2021-03-01');
+  });
+
+  it('«по» раньше «с», набранное с клавиатуры, подтягивает «с»', () => {
+    fixture.detectChanges();
+    from().instance.option('value', '2021-05-01');
+    fixture.detectChanges();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="date-range-to"] input.dx-texteditor-input'
+    );
+    input.value = '01.03.2021';
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(to().instance.option('isValid')).toBeTrue();
+    expect(host.emitted[1]).toEqual({ from: '2021-03-01', to: '2021-03-01' });
+    expect(from().instance.option('value')).toBe('2021-03-01');
   });
 
   it('очистка «с» убирает автоподставленное «по»', () => {
@@ -67,14 +80,14 @@ describe('DateRangeFilterComponent', () => {
     expect(to().instance.option('min')).toBe('2020-02-01');
   });
 
-  it('восстанавливает диапазон из state и ограничивает поля друг другом', () => {
+  it('восстанавливает диапазон из state, поля ограничены границами набора', () => {
     host.state = { from: '2021-01-01', to: '2021-12-31' };
     fixture.detectChanges();
     expect(from().instance.option('value')).toBe('2021-01-01');
     expect(to().instance.option('value')).toBe('2021-12-31');
     expect(from().instance.option('min')).toBe('2020-02-01');
-    expect(from().instance.option('max')).toBe('2021-12-31');
-    expect(to().instance.option('min')).toBe('2021-01-01');
+    expect(from().instance.option('max')).toBe('2026-10-31');
+    expect(to().instance.option('min')).toBe('2020-02-01');
     expect(to().instance.option('max')).toBe('2026-10-31');
     expect(host.emitted).toEqual([]);
   });

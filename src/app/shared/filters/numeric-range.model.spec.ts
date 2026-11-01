@@ -15,20 +15,6 @@ describe('NumericRangeModel', () => {
     expect(m.from).toBe(0);
   });
 
-  it('fromMax = to, toMin = from', () => {
-    const m = make();
-    m.setFrom(10);
-    m.setTo(20);
-    expect(m.fromMax).toBe(20);
-    expect(m.toMin).toBe(10);
-  });
-
-  it('без значений границы = min/max', () => {
-    const m = make();
-    expect(m.fromMax).toBe(100);
-    expect(m.toMin).toBe(0);
-  });
-
   it('зажимает вне диапазона', () => {
     const m = make();
     m.setFrom(-5);

@@ -20,14 +20,6 @@ export abstract class RangeModel<T extends FilterValue> {
 
   constructor(public readonly min: T, public readonly max: T) {}
 
-  get fromMax(): T {
-    return this.to ?? this.max;
-  }
-
-  get toMin(): T {
-    return this.from ?? this.min;
-  }
-
   setFrom(v: T | null): void {
     if (v === null) {
       this.from = null;
