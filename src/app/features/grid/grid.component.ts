@@ -403,6 +403,7 @@ export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
     this.data.dataset = size;
     this.error = null;
     this.dataSource.pageIndex(0);
+    this.grid?.instance.option('paging.pageIndex', 0);
     this.grid?.instance.refresh();
   }
 
