@@ -18,8 +18,16 @@ public static class RowsQuery
             return DataSourceLoader.Load(source, options);
 
         var summaryOptions = SummaryOptions(options);
+        LoadResult result;
         options.TotalSummary = null;
-        var result = DataSourceLoader.Load(source, options);
+        try
+        {
+            result = DataSourceLoader.Load(source, options);
+        }
+        finally
+        {
+            options.TotalSummary = summaryOptions.TotalSummary;
+        }
         result.summary = DataSourceLoader.Load(source, summaryOptions).summary;
         return result;
     }
