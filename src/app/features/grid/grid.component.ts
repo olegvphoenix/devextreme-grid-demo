@@ -19,18 +19,22 @@ import {
 } from 'devextreme/common/grids';
 import CustomStore from 'devextreme/data/custom_store';
 import DataSource from 'devextreme/data/data_source';
-import {
+import dxDataGrid, {
   CellClickEvent,
   CellPreparedEvent,
   ContentReadyEvent,
   FilterPanel,
+  Grouping,
+  GroupPanel,
   OptionChangedEvent,
   Paging,
   Properties,
   Scrolling,
   Selection,
   SelectionChangedEvent,
+  Summary,
 } from 'devextreme/ui/data_grid';
+import { confirm } from 'devextreme/ui/dialog';
 import notify from 'devextreme/ui/notify';
 import { Subscription } from 'rxjs';
 
@@ -72,10 +76,19 @@ import {
   isEditableTarget,
 } from './clipboard.service';
 import {
+  buildExportRequest,
+  estimatePdfPages,
+  exportFileName,
+  ExportKind,
+  ExportSource,
+  PDF_CONFIRM_ROWS,
+} from './export-request';
+import {
   actionsColumn,
   defaultScrollWidths,
   DxColumn,
   GRID_COLUMNS,
+  GRID_SUMMARY,
   GridColumnDef,
   RowAction,
   toDxColumns,
@@ -94,14 +107,15 @@ import {
   saveScrollWidths,
   WidthMode,
 } from './grid-state';
-import { createGridStore } from './grid-store';
+import { createGridStore, LoadScope } from './grid-store';
+import { exportGridToExcel, exportGridToPdf, saveBlob } from './native-export';
 
 /** Задержка ответа сервера по переключателю «Задержка ответа». */
 const DEMO_DELAY_MS = 1500;
 const PAGE_SIZES = [20, 50, 100, 500];
 const SORT_OPTION = /^columns\[\d+\]\.(sortOrder|sortIndex)$/;
 const NOTIFY_SUCCESS_MS = 1500;
-const NOTIFY_ERROR_MS = 3000;
+const NOTIFY_LONG_MS = 3000;
 /** Кнопки действий данные не меняют: только уведомление с id записи. */
 const ROW_ACTION_TEXTS: Record<RowAction, (id: number) => string> = {
   open: (id) => `Открыть запись ${id}`,
@@ -109,9 +123,24 @@ const ROW_ACTION_TEXTS: Record<RowAction, (id: number) => string> = {
   close: (id) => `Запись ${id} закрыта`,
 };
 
+const EXPORT_KIND_TEXTS: Record<ExportKind, string> = {
+  xlsx: 'Excel',
+  pdf: 'PDF',
+};
+const EXPORT_SOURCE_TEXTS: Record<ExportSource, string> = {
+  server: 'сервер',
+  grid: 'штатно',
+};
+
 interface WidthModeItem {
   value: WidthMode;
   text: string;
+}
+
+interface ExportJob {
+  source: ExportSource;
+  kind: ExportKind;
+  startedAt: number;
 }
 
 interface SelectionModeItem {
@@ -168,6 +197,17 @@ export class GridComponent implements OnInit, OnDestroy {
   readonly headerFilter: HeaderFilter = { visible: false };
   readonly filterRow: FilterRow = { visible: false };
   readonly loadPanel: LoadPanel = { enabled: true };
+  readonly groupPanel: GroupPanel = {
+    visible: true,
+    allowColumnDragging: true,
+    emptyPanelText: 'Перетащите сюда заголовок колонки, чтобы сгруппировать',
+  };
+  readonly grouping: Grouping = {
+    autoExpandAll: false,
+    allowCollapsing: true,
+    contextMenuEnabled: true,
+  };
+  readonly summary: Summary = GRID_SUMMARY;
   readonly stateStoring: StateStoring = {
     enabled: true,
     type: 'custom',
@@ -190,10 +230,15 @@ export class GridComponent implements OnInit, OnDestroy {
   filterTarget: HTMLElement | null = null;
   filterVisible = false;
 
+  exporting: ExportJob | null = null;
+
   private readonly store: CustomStore<ProductionRecord, number>;
   private readonly filterSubscription: Subscription;
   private stopFps: (() => void) | null = null;
   private resetting = false;
+  private exportSubscription: Subscription | null = null;
+  /** Ошибка загрузки всех строк штатным экспортом: он сам её не отдаёт и строит пустой файл. */
+  private exportLoadError: ApiError | null = null;
 
   constructor(
     private readonly data: DataService,
@@ -212,7 +257,9 @@ export class GridComponent implements OnInit, OnDestroy {
       this.filterState = state;
       this.filterValue = buildFilterExpression(state);
     });
-    this.store = createGridStore(this.data, (e) => this.onLoadError(e));
+    this.store = createGridStore(this.data, (e, scope) =>
+      this.onLoadError(e, scope)
+    );
     this.dataSource = new DataSource<ProductionRecord, number>({
       store: this.store,
     });
@@ -246,6 +293,19 @@ export class GridComponent implements OnInit, OnDestroy {
     return this.flags.fail;
   }
 
+  get exportBusy(): boolean {
+    return this.exporting !== null;
+  }
+
+  get exportingText(): string {
+    if (this.exporting === null) {
+      return '';
+    }
+    const kind = EXPORT_KIND_TEXTS[this.exporting.kind];
+    const source = EXPORT_SOURCE_TEXTS[this.exporting.source];
+    return `Экспорт ${kind} (${source})…`;
+  }
+
   ngOnInit(): void {
     this.data.dataset = this.settings.dataset;
     this.columns = [
@@ -257,6 +317,7 @@ export class GridComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.flushState();
     this.filterSubscription.unsubscribe();
+    this.exportSubscription?.unsubscribe();
     this.stopFps?.();
     this.dataSource.dispose();
   }
@@ -444,6 +505,103 @@ export class GridComponent implements OnInit, OnDestroy {
     this.grid?.instance.refresh();
   }
 
+  /**
+   * Экспорт текущего вида: колонки, сортировка, группировка и фильтр страницы,
+   * все строки под фильтром. Сервер строит файл по запросу страницы; штатный
+   * путь — `exportDataGrid` поверх exceljs/jspdf, данные грид читает сам.
+   * PDF от 100 000 строк запрашивает подтверждение с оценкой страниц.
+   */
+  async onExport(source: ExportSource, kind: ExportKind): Promise<void> {
+    const instance = this.grid?.instance;
+    if (instance === undefined || this.exporting !== null) {
+      return;
+    }
+    const rows = instance.totalCount();
+    if (kind === 'pdf' && rows >= PDF_CONFIRM_ROWS) {
+      const pages = estimatePdfPages(rows).toLocaleString('ru-RU');
+      const confirmed = await confirm(
+        `Строк: ${rows.toLocaleString('ru-RU')}, страниц PDF: около ${pages}. ` +
+          'Построение займёт десятки секунд. Продолжить?',
+        'Экспорт в PDF'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+    this.exporting = { source, kind, startedAt: performance.now() };
+    this.exportLoadError = null;
+    const fileName = exportFileName(source, kind, new Date());
+    if (source === 'server') {
+      this.exportFromServer(instance, kind, fileName);
+    } else {
+      await this.exportFromGrid(instance, kind, fileName);
+    }
+  }
+
+  /** Отписка прерывает запрос: сервер проверяет `RequestAborted` между страницами PDF. */
+  onExportCancel(): void {
+    this.exportSubscription?.unsubscribe();
+    this.exportSubscription = null;
+    this.exporting = null;
+    notify('Экспорт отменён', 'info', NOTIFY_SUCCESS_MS);
+  }
+
+  private exportFromServer(
+    instance: dxDataGrid,
+    kind: ExportKind,
+    fileName: string
+  ): void {
+    const request = buildExportRequest(instance, this.filterValue);
+    this.exportSubscription = this.data.exportFile(kind, request).subscribe({
+      next: (blob) => {
+        this.exportSubscription = null;
+        saveBlob(blob, fileName).then(
+          () => this.finishExport(fileName),
+          (e: unknown) => this.finishExport(fileName, errorMessage(e))
+        );
+      },
+      error: (e: ApiError) => {
+        this.exportSubscription = null;
+        this.finishExport(fileName, e.message);
+      },
+    });
+  }
+
+  private async exportFromGrid(
+    instance: dxDataGrid,
+    kind: ExportKind,
+    fileName: string
+  ): Promise<void> {
+    try {
+      const blob =
+        kind === 'xlsx'
+          ? await exportGridToExcel(instance)
+          : await exportGridToPdf(instance);
+      if (this.exportLoadError !== null) {
+        this.finishExport(fileName, this.exportLoadError.message);
+        return;
+      }
+      await saveBlob(blob, fileName);
+      this.finishExport(fileName);
+    } catch (e) {
+      this.finishExport(fileName, errorMessage(e));
+    }
+  }
+
+  private finishExport(fileName: string, error?: string): void {
+    const startedAt = this.exporting?.startedAt ?? performance.now();
+    this.exporting = null;
+    const seconds = ((performance.now() - startedAt) / 1000).toLocaleString(
+      'ru-RU',
+      { maximumFractionDigits: 1 }
+    );
+    if (error === undefined) {
+      notify(`${fileName} сохранён за ${seconds} с`, 'success', NOTIFY_LONG_MS);
+    } else {
+      notify(`Экспорт не выполнен: ${error}`, 'error', NOTIFY_LONG_MS);
+    }
+  }
+
   /** Чистит все ключи приложения и перезагружает страницу: грид стартует с умолчаний. */
   onReset(): void {
     this.resetting = true;
@@ -461,7 +619,7 @@ export class GridComponent implements OnInit, OnDestroy {
       notify(
         'Данные части выбранных строк ещё не загружены, повторите позже',
         'warning',
-        NOTIFY_ERROR_MS
+        NOTIFY_LONG_MS
       );
       return;
     }
@@ -473,7 +631,7 @@ export class GridComponent implements OnInit, OnDestroy {
         NOTIFY_SUCCESS_MS
       );
     } catch {
-      notify('Не удалось скопировать в буфер обмена', 'error', NOTIFY_ERROR_MS);
+      notify('Не удалось скопировать в буфер обмена', 'error', NOTIFY_LONG_MS);
     }
   }
 
@@ -495,7 +653,12 @@ export class GridComponent implements OnInit, OnDestroy {
     return { ...readGridState(this.storage), filterValue: this.filterValue };
   }
 
-  private onLoadError(e: ApiError): void {
+  /** Сбой загрузки всех строк во время штатного экспорта — ошибка экспорта, не полоска грида. */
+  private onLoadError(e: ApiError, scope: LoadScope): void {
+    if (scope === 'all' && this.exporting?.source === 'grid') {
+      this.exportLoadError = e;
+      return;
+    }
     this.error = e.message;
     this.metrics.cancelPending();
   }
@@ -517,4 +680,8 @@ export class GridComponent implements OnInit, OnDestroy {
     this.settings = { ...this.settings, ...change };
     savePageSettings(this.storage, this.settings);
   }
+}
+
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }

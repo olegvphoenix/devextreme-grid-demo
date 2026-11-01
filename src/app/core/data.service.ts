@@ -49,26 +49,18 @@ export class DataService {
   constructor(private readonly http: HttpClient) {}
 
   query(options: GridLoadOptions): Observable<GridLoadResult> {
-    const request$ = this.postForm<GridLoadResult>('/api/rows/query', {
-      skip: options.skip,
-      take: options.take,
-      requireTotalCount: options.requireTotalCount,
-      requireGroupCount: options.requireGroupCount,
-      sort: options.sort,
-      group: options.group,
-      filter: options.filter,
-      totalSummary: options.totalSummary,
-      groupSummary: options.groupSummary,
-    });
-    return this.inGroup(
-      'rows',
-      defer(() => {
-        const started = performance.now();
-        return request$.pipe(
-          tap(() => this.responseMs.next(elapsedMs(started)))
-        );
-      })
-    );
+    return this.inGroup('rows', this.timedQuery(options));
+  }
+
+  /**
+   * Тот же запрос вне группы отмены rows: страница, идущая в это же время,
+   * его не отменяет и им не отменяется. Нужен загрузке всех строк разом — так
+   * штатный `exportDataGrid` читает данные (без `take`; сервер считает такой
+   * запрос тяжёлым и может ответить 429) — и параллельным пробам DataGrid
+   * `take: 1` со счётчиком групп при раскрытых группах.
+   */
+  queryStandalone(options: GridLoadOptions): Observable<GridLoadResult> {
+    return this.timedQuery(options);
   }
 
   distinct(
@@ -115,6 +107,26 @@ export class DataService {
         { headers: FORM_HEADERS, responseType: 'blob' }
       )
       .pipe(catchError((e: HttpErrorResponse) => this.toApiError(e)));
+  }
+
+  private timedQuery(options: GridLoadOptions): Observable<GridLoadResult> {
+    const request$ = this.postForm<GridLoadResult>('/api/rows/query', {
+      skip: options.skip,
+      take: options.take,
+      requireTotalCount: options.requireTotalCount,
+      requireGroupCount: options.requireGroupCount,
+      sort: options.sort,
+      group: options.group,
+      filter: options.filter,
+      totalSummary: options.totalSummary,
+      groupSummary: options.groupSummary,
+    });
+    return defer(() => {
+      const started = performance.now();
+      return request$.pipe(
+        tap(() => this.responseMs.next(elapsedMs(started)))
+      );
+    });
   }
 
   private postForm<T>(

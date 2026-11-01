@@ -25,6 +25,10 @@
             "main": "src/main.ts",
             "polyfills": "src/polyfills.ts",
             "tsConfig": "tsconfig.app.json",
+            "allowedCommonJsDependencies": [
+              "exceljs",
+              "file-saver"
+            ],
             "assets": [
               "src/favicon.ico",
               "src/assets"

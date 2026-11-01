@@ -28,6 +28,7 @@ export interface StatsCall {
 /** Заглушка `DataService`: каждый вызов — свой Subject, ответ выдаётся тестом. */
 export class DataServiceStub {
   readonly queryCalls: GridLoadOptions[] = [];
+  readonly standaloneCalls: GridLoadOptions[] = [];
   readonly distinctCalls: DistinctCall[] = [];
   readonly statsCalls: StatsCall[] = [];
   readonly labelsCalls: LabelsCall[] = [];
@@ -35,6 +36,7 @@ export class DataServiceStub {
   readonly statsPendingAtCall: number[] = [];
 
   private readonly querySubjects: Subject<GridLoadResult>[] = [];
+  private readonly standaloneSubjects: Subject<GridLoadResult>[] = [];
   private readonly distinctSubjects: Subject<DistinctResult>[] = [];
   private readonly statsSubjects: Subject<ColumnStats>[] = [];
   private readonly labelsSubjects: Subject<ProductionRecord>[] = [];
@@ -68,6 +70,31 @@ export class DataServiceStub {
   failQuery(message: string): void {
     const subject = this.querySubjects[this.querySubjects.length - 1];
     subject.error(new ApiError(500, message));
+  }
+
+  /** Вне группы rows: ничего не отменяет и не отменяется. */
+  queryStandalone(options: GridLoadOptions): Observable<GridLoadResult> {
+    this.standaloneCalls.push(options);
+    const subject = new Subject<GridLoadResult>();
+    this.standaloneSubjects.push(subject);
+    return subject.asObservable();
+  }
+
+  get lastStandalone(): GridLoadOptions {
+    return this.standaloneCalls[this.standaloneCalls.length - 1];
+  }
+
+  respondStandalone(
+    result: GridLoadResult,
+    index: number = this.standaloneSubjects.length - 1
+  ): void {
+    this.standaloneSubjects[index].next(result);
+    this.standaloneSubjects[index].complete();
+  }
+
+  failStandalone(message: string): void {
+    const subject = this.standaloneSubjects[this.standaloneSubjects.length - 1];
+    subject.error(new ApiError(429, message));
   }
 
   distinct(

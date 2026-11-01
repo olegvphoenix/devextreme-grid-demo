@@ -2,6 +2,7 @@ import {
   actionsColumn,
   DxColumnButton,
   GRID_COLUMNS,
+  GRID_SUMMARY,
   HEADER_CELL_TEMPLATE,
   LABELS_CELL_TEMPLATE,
   LABELS_KEY_COLUMN,
@@ -136,5 +137,51 @@ describe('actionsColumn', () => {
   it('клик без строки ничего не делает', () => {
     click(buttons()[0], undefined);
     expect(actions).toEqual([]);
+  });
+});
+
+describe('GRID_SUMMARY', () => {
+  const describe_ = (items: Array<{ column?: string; summaryType?: string }>) =>
+    items.map((item) => `${item.column ?? '*'}:${item.summaryType}`);
+
+  it('агрегаты групп: число строк, суммы весов и количества, средние веса', () => {
+    expect(describe_(GRID_SUMMARY.groupItems!)).toEqual([
+      '*:count',
+      'netWeight:sum',
+      'netWeight:avg',
+      'grossWeight:sum',
+      'grossWeight:avg',
+      'qty:sum',
+    ]);
+  });
+
+  it('итоги по всему набору — те же агрегаты, число строк в колонке id', () => {
+    expect(describe_(GRID_SUMMARY.totalItems!)).toEqual([
+      'id:count',
+      'netWeight:sum',
+      'netWeight:avg',
+      'grossWeight:sum',
+      'grossWeight:avg',
+      'qty:sum',
+    ]);
+  });
+
+  it('подписи на русском, веса с одним знаком, целые без дробной части', () => {
+    const all = [...GRID_SUMMARY.groupItems!, ...GRID_SUMMARY.totalItems!];
+    all.forEach((item) => {
+      expect(item.displayFormat).withContext(String(item.summaryType)).toMatch(
+        /^(Строк|Всего строк|Сумма|Среднее): \{0\}$/
+      );
+      expect(item.valueFormat)
+        .withContext(`${item.column}:${item.summaryType}`)
+        .toBe(
+          item.column === 'netWeight' || item.column === 'grossWeight'
+            ? '#,##0.0'
+            : '#,##0'
+        );
+    });
+    GRID_SUMMARY.groupItems!.forEach((item) => {
+      expect(item.alignByColumn === true).toBe(item.column !== undefined);
+    });
   });
 });

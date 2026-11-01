@@ -225,6 +225,52 @@ describe('DataService', () => {
     expect(rows.cancelled).toBeFalse();
   });
 
+  it('queryStandalone шлёт те же ключи вне группы rows, без take', () => {
+    service.query({ take: 20 }).subscribe();
+    const pageRequest = http.expectOne('/api/rows/query');
+    let result: unknown;
+    service
+      .queryStandalone({
+        requireTotalCount: false,
+        sort: [{ selector: 'date', desc: true }],
+        filter: ['status', '=', 1],
+      })
+      .subscribe((r) => (result = r));
+    const requests = http.match('/api/rows/query');
+    expect(requests.length).toBe(1);
+    expect(pageRequest.cancelled).toBeFalse();
+    const body = new URLSearchParams(requests[0].request.body);
+    expect(keysOf(body)).toEqual([
+      'dataset',
+      'filter',
+      'requireTotalCount',
+      'sort',
+    ]);
+    expect(body.get('requireTotalCount')).toBe('false');
+
+    service.query({ take: 20, skip: 20 }).subscribe();
+    expect(pageRequest.cancelled).toBeTrue();
+    expect(requests[0].cancelled).toBeFalse();
+
+    const payload = { data: [], totalCount: -1, groupCount: -1, summary: null };
+    requests[0].flush(payload);
+    expect(result).toEqual(payload);
+  });
+
+  it('ошибка queryStandalone превращается в ApiError с сообщением сервера', () => {
+    let error: ApiError | undefined;
+    service.queryStandalone({}).subscribe({ error: (e) => (error = e) });
+    http
+      .expectOne('/api/rows/query')
+      .flush(
+        { message: 'Сервер занят' },
+        { status: 429, statusText: 'Too Many Requests' }
+      );
+    expect(error instanceof ApiError).toBeTrue();
+    expect(error!.status).toBe(429);
+    expect(error!.message).toBe('Сервер занят');
+  });
+
   it('updateLabels делает PUT с JSON и dataset в query string', () => {
     service.dataset = 100000;
     let result: unknown;

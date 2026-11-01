@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { DxButtonModule } from 'devextreme-angular/ui/button';
 import { DxCheckBoxModule } from 'devextreme-angular/ui/check-box';
 import { DxDataGridModule } from 'devextreme-angular/ui/data-grid';
+import { DxLoadIndicatorModule } from 'devextreme-angular/ui/load-indicator';
 import { DxRadioGroupModule } from 'devextreme-angular/ui/radio-group';
 import { DxSelectBoxModule } from 'devextreme-angular/ui/select-box';
 
@@ -27,6 +28,7 @@ import { StatusBadgeComponent } from './status-badge.component';
     DxButtonModule,
     DxCheckBoxModule,
     DxDataGridModule,
+    DxLoadIndicatorModule,
     DxRadioGroupModule,
     DxSelectBoxModule,
     FiltersModule,

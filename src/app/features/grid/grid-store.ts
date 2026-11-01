@@ -17,19 +17,35 @@ import { ProductionRecord } from '../../models/production-record.model';
 type RowLoadOptions = LoadOptions<ProductionRecord>;
 type RowLoadResult = LoadResultObject<ProductionRecord>;
 
-/** Ответ запроса, который DataService отменил ради нового: грид его уже не ждёт. */
-function supersededResult(): RowLoadResult {
+/**
+ * Пустой ответ: для запроса, который DataService отменил ради нового (грид его
+ * уже не ждёт), и для отказа загрузки всех строк — `exportDataGrid` на
+ * отклонённом promise не завершается никогда и оставляет свою панель
+ * загрузки; ошибку страница получает через `onError`.
+ */
+function emptyResult(): RowLoadResult {
   return { data: [] };
 }
 
 /**
- * `CustomStore` над `DataService.query`. Запрос, отменённый новым запросом,
- * не завершается в DataService, поэтому promise закрывается по отписке
- * потребителя — без `onError` и без отказа.
+ * Страница грида; все строки разом (`exportDataGrid`, выбор по ключам);
+ * проба `take: 1` — так DataGrid при раскрытых группах считает смещение
+ * страницы (`loadGroupTotalCount`), по несколько параллельно.
+ */
+export type LoadScope = 'page' | 'all' | 'probe';
+
+/**
+ * `CustomStore` над `DataService`. Страница идёт через `query`: новая
+ * страница отменяет прежнюю. Все строки и пробы идут через `queryStandalone`
+ * вне группы отмены: иначе страница, запрошенная во время экспорта, обрывала
+ * бы его, а вторая проба — первую, и грид молча оставлял бы прежние строки;
+ * обрыв завершает promise пустым ответом, который грид принимает за данные.
+ * Запрос, отменённый новым запросом, не завершается в DataService, поэтому
+ * promise закрывается по отписке потребителя — без `onError` и без отказа.
  */
 export function createGridStore(
   data: DataService,
-  onError: (e: ApiError) => void
+  onError: (e: ApiError, scope: LoadScope) => void
 ): CustomStore<ProductionRecord, number> {
   return new CustomStore<ProductionRecord, number>({
     key: 'id',
@@ -40,28 +56,46 @@ export function createGridStore(
 function loadRows(
   data: DataService,
   options: RowLoadOptions,
-  onError: (e: ApiError) => void
+  onError: (e: ApiError, scope: LoadScope) => void
 ): Promise<RowLoadResult> {
+  const scope = scopeOf(options);
+  const gridOptions = toGridLoadOptions(options);
+  const request$ =
+    scope === 'page'
+      ? data.query(gridOptions)
+      : data.queryStandalone(gridOptions);
   return new Promise<RowLoadResult>((resolve, reject) => {
     let settled = false;
-    const subscription = data.query(toGridLoadOptions(options)).subscribe({
+    const subscription = request$.subscribe({
       next: (result) => {
         settled = true;
         resolve(toLoadResult(result));
       },
       error: (e: ApiError) => {
         settled = true;
-        onError(e);
-        reject(e);
+        onError(e, scope);
+        if (scope === 'all') {
+          resolve(emptyResult());
+        } else {
+          reject(e);
+        }
       },
     });
     subscription.add(() => {
       if (!settled) {
         settled = true;
-        resolve(supersededResult());
+        resolve(emptyResult());
       }
     });
   });
+}
+
+/** Размеры страницы начинаются с 20, поэтому `take: 1` бывает только у пробы. */
+function scopeOf(options: RowLoadOptions): LoadScope {
+  if (options.take === undefined) {
+    return 'all';
+  }
+  return options.take === 1 ? 'probe' : 'page';
 }
 
 function toLoadResult(result: GridLoadResult): RowLoadResult {

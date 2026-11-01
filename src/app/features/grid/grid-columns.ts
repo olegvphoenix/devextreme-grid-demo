@@ -1,5 +1,10 @@
 import DevExpress from 'devextreme/bundles/dx.all';
 import { DataType } from 'devextreme/common';
+import {
+  Summary,
+  SummaryGroupItem,
+  SummaryTotalItem,
+} from 'devextreme/ui/data_grid';
 
 import { ColumnKind } from '../../models/column-filter.model';
 import {
@@ -67,6 +72,57 @@ export const GRID_COLUMNS: GridColumnDef[] = [
   { field: 'operator', caption: 'Оператор', kind: 'string', width: 150 },
   { field: 'labels', caption: 'Ярлыки', kind: 'labels', width: 180 },
 ];
+
+type AggregateField = 'netWeight' | 'grossWeight' | 'qty';
+
+interface AggregateDef {
+  column: AggregateField;
+  summaryType: 'sum' | 'avg';
+}
+
+const AGGREGATES: AggregateDef[] = [
+  { column: 'netWeight', summaryType: 'sum' },
+  { column: 'netWeight', summaryType: 'avg' },
+  { column: 'grossWeight', summaryType: 'sum' },
+  { column: 'grossWeight', summaryType: 'avg' },
+  { column: 'qty', summaryType: 'sum' },
+];
+
+function aggregateItem(def: AggregateDef): SummaryGroupItem & SummaryTotalItem {
+  return {
+    column: def.column,
+    summaryType: def.summaryType,
+    displayFormat: def.summaryType === 'sum' ? 'Сумма: {0}' : 'Среднее: {0}',
+    valueFormat: def.column === 'qty' ? INTEGER_FORMAT : WEIGHT_FORMAT,
+  };
+}
+
+/**
+ * Агрегаты групп и итогов; считает сервер (`remoteOperations.summary`).
+ * Число строк группы — в заголовке группы, остальное — под своей колонкой.
+ */
+export const GRID_SUMMARY: Summary = {
+  groupItems: [
+    {
+      summaryType: 'count',
+      displayFormat: 'Строк: {0}',
+      valueFormat: INTEGER_FORMAT,
+    },
+    ...AGGREGATES.map((def) => ({
+      ...aggregateItem(def),
+      alignByColumn: true,
+    })),
+  ],
+  totalItems: [
+    {
+      column: 'id',
+      summaryType: 'count',
+      displayFormat: 'Всего строк: {0}',
+      valueFormat: INTEGER_FORMAT,
+    },
+    ...AGGREGATES.map(aggregateItem),
+  ],
+};
 
 /** Имя `dxTemplate` заголовка на странице: подпись и кнопка фильтра. */
 export const HEADER_CELL_TEMPLATE = 'headerCell';

@@ -30,6 +30,13 @@
   height: 0;
 }
 
+.grid-page__export-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
 .grid-page__error {
   display: flex;
   align-items: center;

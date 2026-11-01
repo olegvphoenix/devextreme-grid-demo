@@ -65,7 +65,61 @@
       (onClick)="onReset()"
     ></dx-button>
   </div>
-  <span id="export" class="grid-page__anchor"></span>
+  <div class="grid-page__group" id="export">
+    <span class="grid-page__label">Экспорт</span>
+    <dx-button
+      data-testid="export-server-xlsx"
+      text="Excel (сервер)"
+      icon="exportxlsx"
+      hint="Все строки под фильтром, файл строит сервер"
+      stylingMode="outlined"
+      [disabled]="exportBusy"
+      (onClick)="onExport('server', 'xlsx')"
+    ></dx-button>
+    <dx-button
+      data-testid="export-server-pdf"
+      text="PDF (сервер)"
+      icon="exportpdf"
+      hint="Все строки под фильтром, файл строит сервер"
+      stylingMode="outlined"
+      [disabled]="exportBusy"
+      (onClick)="onExport('server', 'pdf')"
+    ></dx-button>
+    <dx-button
+      data-testid="export-grid-xlsx"
+      text="Excel (штатно)"
+      icon="exportxlsx"
+      hint="exportDataGrid: грид сам загружает все строки в браузер"
+      stylingMode="outlined"
+      [disabled]="exportBusy"
+      (onClick)="onExport('grid', 'xlsx')"
+    ></dx-button>
+    <dx-button
+      data-testid="export-grid-pdf"
+      text="PDF (штатно)"
+      icon="exportpdf"
+      hint="exportDataGrid: грид сам загружает все строки в браузер"
+      stylingMode="outlined"
+      [disabled]="exportBusy"
+      (onClick)="onExport('grid', 'pdf')"
+    ></dx-button>
+    <span
+      *ngIf="exporting"
+      class="grid-page__export-status"
+      role="status"
+      data-testid="export-status"
+    >
+      <dx-load-indicator [height]="20" [width]="20"></dx-load-indicator>
+      <span data-testid="export-status-text">{{ exportingText }}</span>
+      <dx-button
+        *ngIf="exporting.source === 'server'"
+        data-testid="export-cancel"
+        text="Отмена"
+        stylingMode="text"
+        (onClick)="onExportCancel()"
+      ></dx-button>
+    </span>
+  </div>
 </section>
 
 <app-filter-chips
@@ -127,6 +181,9 @@
     [headerFilter]="headerFilter"
     [filterRow]="filterRow"
     [loadPanel]="loadPanel"
+    [groupPanel]="groupPanel"
+    [grouping]="grouping"
+    [summary]="summary"
     [stateStoring]="stateStoring"
     [dateSerializationFormat]="dateSerializationFormat"
     (onContentReady)="onContentReady($event)"
