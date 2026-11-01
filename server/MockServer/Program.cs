@@ -38,12 +38,16 @@ app.UseExceptionHandler(errors => errors.Run(async context =>
     await context.Response.WriteAsJsonAsync(new { message = error?.Message ?? "Внутренняя ошибка сервера" });
 }));
 app.UseMiddleware<DemoHeadersMiddleware>();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapGet("/api/datasets", (DatasetStore store) => store.Describe());
 app.MapRows();
 app.MapColumns();
 app.MapExport();
+app.MapFallback("/api/{**path}", () => Results.NotFound());
+app.MapFallbackToFile("index.html");
 
 app.Run();
 return 0;
