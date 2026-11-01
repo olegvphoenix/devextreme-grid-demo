@@ -35,7 +35,10 @@ app.UseExceptionHandler(errors => errors.Run(async context =>
         JsonException => StatusCodes.Status400BadRequest,
         _ => StatusCodes.Status500InternalServerError,
     };
-    await context.Response.WriteAsJsonAsync(new { message = error?.Message ?? "Внутренняя ошибка сервера" });
+    var message = error is BadHttpRequestException or JsonException
+        ? error.Message
+        : "Внутренняя ошибка сервера";
+    await context.Response.WriteAsJsonAsync(new { message });
 }));
 app.UseMiddleware<DemoHeadersMiddleware>();
 app.UseDefaultFiles();
