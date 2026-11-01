@@ -49,3 +49,5 @@ server/**/bin/
 server/**/obj/
 
 .superpowers/
+
+src/devextreme-license.ts
