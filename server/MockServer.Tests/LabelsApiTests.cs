@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using MockServer.Data;
 
 namespace MockServer.Tests;
@@ -98,6 +99,28 @@ public class LabelsApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var record = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
         Assert.Equal(labels, record.GetProperty("labels").EnumerateArray().Select(l => l.GetString()));
+    }
+
+    [Fact]
+    public async Task ANewRowBeyondTheOverlayBudgetIs409ButRowsAlreadyInTheOverlayStayEditable()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+                services.AddSingleton(new DatasetStore(new DateOnly(2026, 10, 31), labelOverlayBudget: 2))));
+        var client = factory.CreateClient();
+
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync("/api/rows/1/labels?dataset=1000", new { labels = new[] { "а" } })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync("/api/rows/2/labels?dataset=100000", new { labels = new[] { "а" } })).StatusCode);
+
+        var third = await client.PutAsJsonAsync("/api/rows/3/labels?dataset=1000", new { labels = new[] { "а" } });
+        Assert.Equal(HttpStatusCode.Conflict, third.StatusCode);
+        var message = JsonDocument.Parse(await third.Content.ReadAsStringAsync()).RootElement.GetProperty("message").GetString();
+        Assert.Matches("[а-яА-Я]", message);
+
+        var again = await client.PutAsJsonAsync("/api/rows/1/labels?dataset=1000", new { labels = new[] { "а", "б" } });
+        Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        var cleared = await client.PutAsJsonAsync("/api/rows/2/labels?dataset=100000", new { labels = Array.Empty<string>() });
+        Assert.Equal(HttpStatusCode.OK, cleared.StatusCode);
     }
 
     [Fact]

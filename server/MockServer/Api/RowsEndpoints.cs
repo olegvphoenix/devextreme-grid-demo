@@ -49,5 +49,9 @@ public static class RowsEndpoints
         {
             return Results.NotFound(new { message = e.Message });
         }
+        catch (LabelOverlayFullException e)
+        {
+            return Results.Conflict(new { message = e.Message });
+        }
     }
 }
