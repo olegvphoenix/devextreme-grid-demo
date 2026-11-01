@@ -8,29 +8,33 @@ namespace MockServer.Api;
 /// DataSourceLoader считает totalSummary по отсортированному (или сгруппированному)
 /// запросу: на 1 000 000 строк это полная сортировка на каждый запрос, тогда как
 /// странице хватает частичной. Итоги считаются вторым проходом по отфильтрованному
-/// набору без сортировки и подставляются в результат страницы.
+/// набору без сортировки и подставляются в результат страницы. Списки значений
+/// снимаются с фильтра на время загрузки (<see cref="ValueListFilter"/>); параметры
+/// вызывающего возвращаются как были.
 /// </summary>
 public static class RowsQuery
 {
     public static LoadResult Load(IQueryable<ProductionRecord> source, DataSourceLoadOptionsBase options)
     {
-        source = ValueListFilter.Apply(source, options);
-        if (!NeedsSeparateSummary(options))
-            return DataSourceLoader.Load(source, options);
-
-        var summaryOptions = SummaryOptions(options);
-        LoadResult result;
-        options.TotalSummary = null;
+        var filter = options.Filter;
+        var totalSummary = options.TotalSummary;
         try
         {
-            result = DataSourceLoader.Load(source, options);
+            source = ValueListFilter.Apply(source, options);
+            if (!NeedsSeparateSummary(options))
+                return DataSourceLoader.Load(source, options);
+
+            var summaryOptions = SummaryOptions(options);
+            options.TotalSummary = null;
+            var result = DataSourceLoader.Load(source, options);
+            result.summary = DataSourceLoader.Load(source, summaryOptions).summary;
+            return result;
         }
         finally
         {
-            options.TotalSummary = summaryOptions.TotalSummary;
+            options.Filter = filter;
+            options.TotalSummary = totalSummary;
         }
-        result.summary = DataSourceLoader.Load(source, summaryOptions).summary;
-        return result;
     }
 
     public static DataSourceLoadOptionsBase SummaryOptions(DataSourceLoadOptionsBase options) => new()

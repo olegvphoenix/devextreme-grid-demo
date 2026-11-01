@@ -1,6 +1,7 @@
 using System.Collections;
 using DevExtreme.AspNet.Data;
 using DevExtreme.AspNet.Data.Helpers;
+using Microsoft.AspNetCore.Http;
 using MockServer.Api;
 using MockServer.Data;
 
@@ -52,6 +53,7 @@ public class ValueListFilterTests
     [InlineData("[[\"id\",\"=\",5],\"or\",[\"id\",\"=\",7]]", new[] { 5, 7 })]
     [InlineData("[[\"status\",\"=\",0],\"or\",[\"status\",\"=\",3]]", null)]
     [InlineData("[[\"date\",\"=\",\"2020-02-01\"],\"or\",[\"date\",\"=\",\"2020-02-02\"]]", null)]
+    [InlineData("[[\"netWeight\",\"=\",0.6],\"or\",[\"netWeight\",\"=\",0.7],\"or\",[\"netWeight\",\"=\",12.5]]", null)]
     public void NumbersAndDatesAreConvertedToThePropertyType(string filter, int[]? expected)
     {
         var (rewritten, plain, remaining) = Compare(filter);
@@ -75,6 +77,87 @@ public class ValueListFilterTests
         Assert.Equal(3, remaining!.Count);
         Assert.Equal("plant", ((IList)remaining[0]!)[0]);
         Assert.Equal("status", ((IList)remaining[2]!)[0]);
+    }
+
+    /// <summary>Клиент: колонка со списком и диапазоном — свой «and», и ещё одна колонка — внешний «and».</summary>
+    [Fact]
+    public void TheClientsTwoColumnShapeIsLiftedFromTheNestedAnd()
+    {
+        var plant = Rows[0].Plant;
+        var (rewritten, plain, remaining) = Compare(
+            $"[[\"plant\",\"=\",\"{plant}\"],\"and\",[[[\"id\",\"=\",1],\"or\",[\"id\",\"=\",2],\"or\",[\"id\",\"=\",3]],\"and\",[\"id\",\">=\",2]]]");
+
+        Assert.Equal(plain, rewritten);
+        Assert.Equal(Rows.Where(r => r.Plant == plant && r.Id is 2 or 3).Select(r => r.Id), rewritten);
+        Assert.Equal(0, CountLeaves(remaining!, "=", "id"));
+        Assert.Equal(2, ValueListFilter.CountOperands(remaining));
+    }
+
+    [Fact]
+    public void AChainUnderExtraAndWrappersIsLiftedToo()
+    {
+        var (rewritten, plain, remaining) = Compare(
+            "[[[[\"id\",\"=\",1],\"or\",[\"id\",\"=\",2]],\"and\",[\"qty\",\">=\",1]],\"and\",[[\"status\",\">=\",0],\"and\",[[\"id\",\"=\",2],\"or\",[\"id\",\"=\",3]]]]");
+
+        Assert.Equal(new[] { 2 }, rewritten);
+        Assert.Equal(plain, rewritten);
+        Assert.Equal(2, ValueListFilter.CountOperands(remaining));
+        Assert.Equal(0, CountLeaves(remaining!, "=", "id"));
+    }
+
+    [Fact]
+    public void ALabelsListBecomesASetOverTheLabelsOfTheRow()
+    {
+        var first = Rows.First(r => r.Labels.Length > 0).Labels[0];
+        var (rewritten, plain, remaining) = Compare(
+            $"[[\"labelsKey\",\"contains\",\"|{first.ToUpperInvariant()}|\"],\"or\",[\"labelsKey\",\"contains\",\"|нет такого|\"]]");
+
+        Assert.NotEmpty(rewritten);
+        Assert.Equal(plain, rewritten);
+        Assert.Null(remaining);
+    }
+
+    [Theory]
+    [InlineData("[[\"labelsKey\",\"contains\",\"|а|б|\"],\"or\",[\"labelsKey\",\"contains\",\"|в|\"]]")]
+    [InlineData("[[\"labelsKey\",\"contains\",\"а\"],\"or\",[\"labelsKey\",\"contains\",\"|в|\"]]")]
+    public void ALabelsValueThatIsNotOneLabelIsLeftToDataSourceLoader(string filter)
+    {
+        var options = Parse(filter);
+        var before = options.Filter;
+
+        ValueListFilter.Apply(Rows.AsQueryable(), options);
+
+        Assert.Same(before, options.Filter);
+    }
+
+    [Fact]
+    public void ResidualConditionsAboveTheCapAre400()
+    {
+        var chain = string.Join(",\"and\",", Enumerable.Range(1, ValueListFilter.MaxResidualOperands + 1).Select(i => $"[\"id\",\"<>\",{i}]"));
+        var options = Parse($"[{chain}]");
+
+        var e = Assert.Throws<BadHttpRequestException>(() => ValueListFilter.Apply(Rows.AsQueryable(), options));
+
+        Assert.Equal(400, e.StatusCode);
+        Assert.Matches("[а-яА-Я]", e.Message);
+    }
+
+    [Fact]
+    public void ResidualConditionsAtTheCapPassWhileTheListsAreLifted()
+    {
+        var residual = string.Join(",\"and\",", Enumerable.Range(1, ValueListFilter.MaxResidualOperands).Select(i => $"[\"id\",\"<>\",{i}]"));
+        var list = string.Join(",\"or\",", Enumerable.Range(1, 500).Select(i => $"[\"id\",\"=\",{i}]"));
+        var (rewritten, plain, remaining) = Compare($"[[{list}],\"and\",[{residual}]]");
+
+        Assert.Equal(plain, rewritten);
+        Assert.Equal(ValueListFilter.MaxResidualOperands, ValueListFilter.CountOperands(remaining));
+    }
+
+    private static int CountLeaves(IList filter, string op, string field)
+    {
+        if (filter.Count == 3 && filter[0] is string f && filter[1] is string o)
+            return f == field && o == op ? 1 : 0;
+        return filter.OfType<IList>().Sum(child => CountLeaves(child, op, field));
     }
 
     [Fact]

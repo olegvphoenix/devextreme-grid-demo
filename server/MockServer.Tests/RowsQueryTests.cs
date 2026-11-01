@@ -63,12 +63,21 @@ public class RowsQueryTests
     {
         var rows = DataGenerator.Generate(1000, new DateOnly(2026, 10, 31)).AsQueryable();
         var options = SortedPageWithSummary();
+        options.Filter = new List<object>
+        {
+            new List<object> { "status", "=", 1 },
+            "and",
+            new List<object> { new List<object> { "id", "=", 1 }, "or", new List<object> { "id", "=", 2 } },
+        };
         var summary = options.TotalSummary;
+        var filter = options.Filter;
 
-        RowsQuery.Load(rows, options);
+        var result = RowsQuery.Load(rows, options);
 
         Assert.Same(summary, options.TotalSummary);
+        Assert.Same(filter, options.Filter);
         Assert.NotNull(options.Sort);
+        Assert.True(result.totalCount <= 2);
     }
 
     [Fact]

@@ -130,17 +130,59 @@ public class RowsApiTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task SixThousandOperandsAreTheLimit()
+    public async Task TwentyThousandOperandsAreTheLimit()
     {
         var atLimit = await Query(("dataset", "1000"), ("take", "1"), ("requireTotalCount", "true"),
-            ("filter", OrChain("id", Enumerable.Range(1, 6000).Select(i => i.ToString()))));
+            ("filter", OrChain("id", Enumerable.Range(1, 20000).Select(i => i.ToString()))));
         Assert.Equal(1000, atLimit.GetProperty("totalCount").GetInt32());
 
         var overLimit = await ApiClient.PostForm(_client, "/api/rows/query", ("dataset", "1000"), ("take", "1"),
-            ("filter", OrChain("id", Enumerable.Range(1, 6001).Select(i => i.ToString()))));
+            ("filter", OrChain("id", Enumerable.Range(1, 20001).Select(i => i.ToString()))));
         Assert.Equal(HttpStatusCode.BadRequest, overLimit.StatusCode);
         var json = JsonDocument.Parse(await overLimit.Content.ReadAsStringAsync()).RootElement;
         Assert.False(string.IsNullOrEmpty(json.GetProperty("message").GetString()));
+    }
+
+    /// <summary>Как шлёт клиент: колонка со списком и границей — свой «and», другая колонка — внешний «and».</summary>
+    [Fact]
+    public async Task TheClientsListPlusRangeUnderAnotherColumnIsFastOnTheMillionSet()
+    {
+        var rows = _factory.Services.GetRequiredService<MockServer.Data.DatasetStore>().Get(1000000);
+        var plant = rows[0].Plant;
+        var codes = rows.Where((_, i) => i % 200 == 0).Take(5000).Select(r => r.MarkingCode).ToArray();
+        var expected = codes.ToHashSet(StringComparer.Ordinal);
+        var expectedCount = rows.Where(r => r.Plant == plant && expected.Contains(r.MarkingCode) && r.Id >= 1000).Count();
+        var filter = $"[[\"plant\",\"=\",\"{plant}\"],\"and\",[{OrChain("markingCode", codes.Select(c => $"\"{c}\""))},\"and\",[\"id\",\">=\",1000]]]";
+
+        var sw = Stopwatch.StartNew();
+        var json = await Query(("dataset", "1000000"), ("skip", "0"), ("take", "500"), ("requireTotalCount", "true"),
+            ("totalSummary", "[{\"summaryType\":\"count\"},{\"selector\":\"qty\",\"summaryType\":\"sum\"}]"),
+            ("filter", filter));
+        sw.Stop();
+
+        Assert.Equal(expectedCount, json.GetProperty("totalCount").GetInt32());
+        Assert.All(json.GetProperty("data").EnumerateArray(), r =>
+        {
+            Assert.Equal(plant, r.GetProperty("plant").GetString());
+            Assert.Contains(r.GetProperty("markingCode").GetString()!, expected);
+            Assert.True(r.GetProperty("id").GetInt32() >= 1000);
+        });
+        Assert.True(sw.ElapsedMilliseconds < 15000, $"the filter took {sw.ElapsedMilliseconds} ms");
+    }
+
+    [Fact]
+    public async Task ResidualConditionsAboveTheCapAre400WithMessageBeforeAnyRowIsRead()
+    {
+        var chain = "[" + string.Join(",\"and\",", Enumerable.Range(1, 6000).Select(i => $"[\"markingCode\",\"<>\",\"{i}\"]")) + "]";
+
+        var sw = Stopwatch.StartNew();
+        var response = await ApiClient.PostForm(_client, "/api/rows/query", ("dataset", "1000000"), ("take", "50"), ("filter", chain));
+        sw.Stop();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        Assert.Matches("[а-яА-Я]", json.GetProperty("message").GetString());
+        Assert.True(sw.ElapsedMilliseconds < 5000, $"the rejection took {sw.ElapsedMilliseconds} ms");
     }
 
     [Fact]
@@ -152,7 +194,7 @@ public class RowsApiTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
-        Assert.False(string.IsNullOrEmpty(json.GetProperty("message").GetString()));
+        Assert.Equal("Некорректный запрос: форма повреждена или значение длиннее 2 МБ", json.GetProperty("message").GetString());
     }
 
     [Fact]
