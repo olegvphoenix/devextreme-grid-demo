@@ -25,6 +25,11 @@ export interface ClipboardTable {
 }
 
 const NEEDS_QUOTES = /["\t\r\n]/;
+/**
+ * Excel вычисляет вставленную ячейку, начинающуюся с `=`, `+`, `@` или `-`;
+ * апостроф делает её текстом. Минус перед цифрой — отрицательное число.
+ */
+const FORMULA_START = /^(?:[=+@]|-(?!\d))/;
 
 /** TSV для вставки в Excel: `\t` между ячейками, `\r\n` между строками, кавычки по правилам Excel. */
 export function toExcelText(header: string[], rows: string[][]): string {
@@ -151,5 +156,6 @@ function formatValue(value: unknown, format: Format | undefined): string {
 }
 
 function escapeCell(value: string): string {
-  return NEEDS_QUOTES.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  const text = FORMULA_START.test(value) ? `'${value}` : value;
+  return NEEDS_QUOTES.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
