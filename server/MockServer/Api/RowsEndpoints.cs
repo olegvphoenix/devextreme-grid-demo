@@ -45,9 +45,9 @@ public static class RowsEndpoints
         {
             return Results.Ok(store.UpdateLabels(size, id, body.Labels!));
         }
-        catch (KeyNotFoundException e)
+        catch (KeyNotFoundException)
         {
-            return Results.NotFound(new { message = e.Message });
+            return Results.NotFound(new { message = $"Записи {id} нет в наборе на {size} строк" });
         }
         catch (LabelOverlayFullException e)
         {

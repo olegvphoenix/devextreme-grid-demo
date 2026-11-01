@@ -51,7 +51,10 @@ public class LabelsApiTests : IClassFixture<WebApplicationFactory<Program>>
 
         var badId = await _client.PutAsJsonAsync("/api/rows/1001/labels?dataset=1000", new { labels = new[] { "а" } });
         Assert.Equal(HttpStatusCode.NotFound, badId.StatusCode);
-        Assert.False(string.IsNullOrEmpty(JsonDocument.Parse(await badId.Content.ReadAsStringAsync()).RootElement.GetProperty("message").GetString()));
+        var message = JsonDocument.Parse(await badId.Content.ReadAsStringAsync()).RootElement.GetProperty("message").GetString();
+        Assert.Matches("[а-яА-Я]", message);
+        Assert.Contains("1001", message);
+        Assert.Contains("1000", message);
     }
 
     [Theory]
