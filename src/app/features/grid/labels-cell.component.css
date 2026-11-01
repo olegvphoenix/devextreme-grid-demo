@@ -1,3 +1,13 @@
+/* Единственное место с цветами: палитра Material light. */
+:host {
+  --labels-chip-bg: rgba(0, 0, 0, 0.08);
+  --labels-button-fg: rgba(0, 0, 0, 0.6);
+  --labels-button-hover-bg: rgba(0, 0, 0, 0.12);
+  --labels-button-hover-fg: rgba(0, 0, 0, 0.87);
+  --labels-input-border: rgba(0, 0, 0, 0.42);
+  --labels-input-focus-border: #03a9f4;
+}
+
 /* Одна строка высотой в строку текста ячейки: высота строки грида не меняется. */
 .labels-cell {
   display: flex;
@@ -21,7 +31,7 @@
   height: 20px;
   padding: 0 2px 0 8px;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--labels-chip-bg);
   font-size: 12px;
   line-height: 20px;
 }
@@ -42,13 +52,13 @@
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--labels-button-fg);
   cursor: pointer;
 }
 
 .labels-cell__button:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.12);
-  color: rgba(0, 0, 0, 0.87);
+  background: var(--labels-button-hover-bg);
+  color: var(--labels-button-hover-fg);
 }
 
 .labels-cell__button:disabled {
@@ -69,7 +79,7 @@
   height: 20px;
   padding: 0 4px;
   border: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+  border-bottom: 1px solid var(--labels-input-border);
   background: transparent;
   font: inherit;
   font-size: 12px;
@@ -77,5 +87,5 @@
 }
 
 .labels-cell__input:focus {
-  border-bottom-color: #03a9f4;
+  border-bottom-color: var(--labels-input-focus-border);
 }
