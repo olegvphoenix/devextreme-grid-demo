@@ -12,7 +12,7 @@
     "filter-number": 178,
     "filter-date": 112,
     "filter-display": 16,
-    "state": 317,
+    "state": 322,
     "selection-modes": 171,
     "clipboard": 194,
     "template-badge": 76,
@@ -29,7 +29,7 @@
     "extra-generate": 42,
     "extra-docker": 0
   },
-  "shared": 993,
+  "shared": 994,
   "files": {
     "src/app/core/grid-metrics.service.ts": 94,
     "src/app/features/grid/metrics-panel.component.ts": 14,
@@ -61,7 +61,7 @@
     "src/app/shared/date-format.ts": 2,
     "server/MockServer/Api/ValueFormatter.cs": 16,
     "src/app/features/grid/grid-state.ts": 180,
-    "src/app/features/grid/grid-filter-state.service.ts": 92,
+    "src/app/features/grid/grid-filter-state.service.ts": 97,
     "src/app/core/storage.service.ts": 45,
     "src/app/features/grid/cell-selection.ts": 165,
     "src/app/models/selection-mode.model.ts": 6,
@@ -106,7 +106,7 @@
     "src/app/core/demo-headers.interceptor.ts": 29,
     "server/MockServer/Api/DemoHeadersMiddleware.cs": 25,
     "server/MockServer/Data/CsvWriter.cs": 42,
-    "src/app/features/grid/grid.component.ts": 625,
+    "src/app/features/grid/grid.component.ts": 626,
     "src/app/features/grid/grid.component.html": 243,
     "src/app/features/grid/grid.component.css": 125
   }

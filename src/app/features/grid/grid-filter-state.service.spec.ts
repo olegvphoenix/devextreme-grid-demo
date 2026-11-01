@@ -74,6 +74,19 @@ describe('GridFilterStateService', () => {
     expect(latest(service).value).toEqual({});
   });
 
+  it('reload перечитывает хранилище: удалённый ключ даёт пустое состояние без записи', () => {
+    const service = new GridFilterStateService(storage);
+    const state = latest(service);
+    service.set('plant', { values: ['Завод Юг'] });
+    localStorage.removeItem(KEY);
+
+    service.reload();
+
+    expect(service.snapshot).toEqual({});
+    expect(state.value).toEqual({});
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
   it('set не мутирует прежний снимок', () => {
     const service = new GridFilterStateService(storage);
     service.set('plant', { values: ['Завод Юг'] });

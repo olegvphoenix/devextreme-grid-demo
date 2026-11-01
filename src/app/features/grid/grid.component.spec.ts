@@ -48,6 +48,26 @@ describe('GridComponent', () => {
     localStorage.clear();
   });
 
+  it('opening the page takes the filters from storage, not from the previous visit', () => {
+    component.onFilterApply({ field: 'plant', value: { values: ['Завод Юг'] } });
+    localStorage.removeItem('dxgrid-demo:filters');
+
+    const reopened = new GridComponent(
+      TestBed.inject(DataService),
+      TestBed.inject(StorageService),
+      TestBed.inject(DemoFlagsService),
+      TestBed.inject(GridMetricsService),
+      TestBed.inject(GridFilterStateService),
+      TestBed.inject(ClipboardService),
+      TestBed.inject(ActivatedRoute)
+    );
+    reopened.grid = { instance } as unknown as DxDataGridComponent;
+
+    expect(reopened.filterState).toEqual({});
+    expect(reopened.filterValue).toBeNull();
+    reopened.ngOnDestroy();
+  });
+
   it('switching the dataset returns the grid, not only its data source, to the first page', () => {
     component.dataSource.pageIndex(3);
 

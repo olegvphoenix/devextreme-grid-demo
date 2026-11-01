@@ -48,6 +48,13 @@ export class GridFilterStateService {
     this.publish({});
   }
 
+  /** Страница настроек меняет хранилище мимо службы: при открытии грида состояние перечитывается. */
+  reload(): void {
+    this.subject.next(
+      readFilterState(this.storage.read<unknown>(STORAGE_KEY, null))
+    );
+  }
+
   private publish(state: GridFilterState): void {
     this.storage.write(STORAGE_KEY, state);
     this.subject.next(state);
