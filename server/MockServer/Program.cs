@@ -23,6 +23,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new DateJsonConverter()));
 builder.Services.AddSingleton(new DatasetStore(DateOnly.FromDateTime(DateTime.Now)));
 builder.Services.AddSingleton(new HeavyRequestLimiter(maxConcurrent: 2));
+builder.Services.AddRateLimiter(ColumnEndpoints.ConfigureLimiter);
 
 var app = builder.Build();
 
@@ -40,6 +41,7 @@ app.UseExceptionHandler(errors => errors.Run(async context =>
         : "Внутренняя ошибка сервера";
     await context.Response.WriteAsJsonAsync(new { message });
 }));
+app.UseRateLimiter();
 app.UseMiddleware<DemoHeadersMiddleware>();
 app.UseDefaultFiles();
 app.UseStaticFiles();

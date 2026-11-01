@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Threading.RateLimiting;
 using DevExtreme.AspNet.Data;
+using Microsoft.AspNetCore.RateLimiting;
 using MockServer.Data;
 
 namespace MockServer.Api;
@@ -10,14 +12,34 @@ public sealed record StatsResponse(object? Min, object? Max, int Count);
 
 public static class ColumnEndpoints
 {
+    public const string BusyMessage = "Сервер занят: слишком много запросов списков значений, повторите позже";
+
     /// <summary>Столько значений показывает список фильтра клиента; больше сервер не отдаёт.</summary>
     private const int MaxTake = 5000;
     private const int DefaultTake = MaxTake;
+    private const string LimiterPolicy = "columns";
+    /// <summary>Каждый запрос — проход по набору; окно фильтра открывает их по одному-два.</summary>
+    private const int ConcurrentRequests = 8;
+    private const int QueuedRequests = 32;
 
     public static void MapColumns(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/distinct", Distinct);
-        app.MapPost("/api/stats", Stats);
+        app.MapPost("/api/distinct", Distinct).RequireRateLimiting(LimiterPolicy);
+        app.MapPost("/api/stats", Stats).RequireRateLimiting(LimiterPolicy);
+    }
+
+    /// <summary>Общий на процесс предел одновременных запросов к колонкам; лишние получают 429 с тем же JSON, что и прочие ошибки.</summary>
+    public static void ConfigureLimiter(RateLimiterOptions options)
+    {
+        options.AddConcurrencyLimiter(LimiterPolicy, limiter =>
+        {
+            limiter.PermitLimit = ConcurrentRequests;
+            limiter.QueueLimit = QueuedRequests;
+            limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        });
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.OnRejected = (context, cancellationToken) =>
+            new ValueTask(context.HttpContext.Response.WriteAsJsonAsync(new { message = BusyMessage }, cancellationToken));
     }
 
     private static async Task<IResult> Distinct(HttpContext context, DatasetStore store)
