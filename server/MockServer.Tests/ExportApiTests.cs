@@ -71,6 +71,26 @@ public class ExportApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
         using var doc = PdfReader.Open(new MemoryStream(bytes), PdfDocumentOpenMode.Import);
         Assert.True(doc.PageCount >= 1000 / 50);
+
+        var fonts = doc.Pages[0].Resources.Elements.GetDictionary("/Font")!;
+        var baseFonts = fonts.Elements.Keys
+            .Select(key => fonts.Elements.GetDictionary(key)!.Elements.GetName("/BaseFont"))
+            .ToList();
+        Assert.NotEmpty(baseFonts);
+        Assert.All(baseFonts, name => Assert.EndsWith("+DejaVu Sans", name));
+        var encodings = fonts.Elements.Keys.Select(key => fonts.Elements.GetDictionary(key)!.Elements.GetName("/Subtype"));
+        Assert.All(encodings, subtype => Assert.Equal("/Type0", subtype));
+    }
+
+    [Fact]
+    public async Task EmptyResultStillHasTheHeaderRow()
+    {
+        var bytes = await Export("xlsx", ("dataset", "1000"), ("columns", Columns), ("filter", "[\"id\",\"=\",0]"));
+
+        using var stream = new MemoryStream(bytes);
+        var rows = stream.Query(useHeaderRow: false).Cast<IDictionary<string, object>>().ToList();
+        var header = Assert.Single(rows);
+        Assert.Equal(new object[] { "Дата", "Статус" }, header.Values.ToArray());
     }
 
     [Fact]
