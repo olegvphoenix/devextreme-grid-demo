@@ -9,17 +9,21 @@ public class StaticFilesTests : IClassFixture<WebApplicationFactory<Program>>, I
     private const string IndexHtml = "<!doctype html><title>demo</title>";
 
     private readonly string _webRoot = Directory.CreateTempSubdirectory("grid-demo-wwwroot").FullName;
+    private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
 
     public StaticFilesTests(WebApplicationFactory<Program> factory)
     {
         File.WriteAllText(Path.Combine(_webRoot, "index.html"), IndexHtml);
-        _client = factory
-            .WithWebHostBuilder(builder => builder.UseWebRoot(_webRoot))
-            .CreateClient();
+        _factory = factory.WithWebHostBuilder(builder => builder.UseWebRoot(_webRoot));
+        _client = _factory.CreateClient();
     }
 
-    public void Dispose() => Directory.Delete(_webRoot, recursive: true);
+    public void Dispose()
+    {
+        _factory.Dispose();
+        Directory.Delete(_webRoot, recursive: true);
+    }
 
     [Theory]
     [InlineData("/")]
