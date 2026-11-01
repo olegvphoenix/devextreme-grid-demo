@@ -214,6 +214,11 @@ describe('LabelsCellComponent', () => {
     expect(host.rowKeys).toBe(0);
   });
 
+  it('поле ввода ограничено 32 символами, как ярлык на сервере', () => {
+    openEditor();
+    expect(input()!.maxLength).toBe(32);
+  });
+
   it('открытое поле получает фокус и подсказки без уже стоящих ярлыков', () => {
     openEditor();
     expect(document.activeElement).toBe(input());

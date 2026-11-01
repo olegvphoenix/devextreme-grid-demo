@@ -33,6 +33,7 @@
       data-testid="label-input"
       placeholder="Новый ярлык"
       autocomplete="off"
+      [attr.maxlength]="maxLength"
       [attr.list]="listId"
       [disabled]="busy"
       (keydown)="onEditorKeyDown($event)"

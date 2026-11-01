@@ -14,8 +14,13 @@ import { ApiError } from '../../core/api-error';
 import { DataService } from '../../core/data.service';
 
 const NOTIFY_ERROR_MS = 3000;
-/** Такие же правила на сервере: он отвергает пустые ярлыки и символ `|`. */
+/**
+ * Проверки, которые есть и на сервере: пустой ярлык, символ `|`, длина. Остальные
+ * его правила (не больше 10 ярлыков, без управляющих символов и первых `= + - @`,
+ * бюджет изменённых строк) приходят ответом 400/409 и показываются его текстом.
+ */
 const FORBIDDEN_CHAR = '|';
+const MAX_LENGTH = 32;
 const MESSAGE_DUPLICATE = 'Такой ярлык уже есть';
 const MESSAGE_FORBIDDEN_CHAR = 'Ярлык не может содержать символ |';
 
@@ -39,6 +44,7 @@ export class LabelsCellComponent implements OnDestroy {
   @Output() labelsChange = new EventEmitter<string[]>();
 
   readonly listId = `labels-presets-${nextListId++}`;
+  readonly maxLength = MAX_LENGTH;
   editing = false;
   busy = false;
   presets: string[] = [];
