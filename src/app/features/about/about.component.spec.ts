@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import packageJson from '../../../../package.json';
+import locJson from '../../../assets/loc.json';
 import { AboutComponent } from './about.component';
 import requirementsJson from './requirements.json';
 import { REQUIREMENTS } from './requirements';
@@ -28,6 +29,16 @@ describe('AboutComponent', () => {
     expect(REQUIREMENTS).toEqual(requirementsJson as typeof REQUIREMENTS);
     const ids = REQUIREMENTS.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('loc.json покрывает каждое требование и совпадает с его locFiles (npm run loc)', () => {
+    const counted: Record<string, number> = locJson.requirements;
+    const files: Record<string, number> = locJson.files;
+    REQUIREMENTS.forEach((r) => {
+      expect(counted[r.id]).withContext(r.id).toEqual(jasmine.any(Number));
+      const sum = r.locFiles.reduce((acc, file) => acc + files[file], 0);
+      expect(counted[r.id]).withContext(r.id).toBe(sum);
+    });
   });
 
   it('версии пакетов — из package.json', () => {
