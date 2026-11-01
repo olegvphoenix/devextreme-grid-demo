@@ -2,7 +2,7 @@ FROM node:24-slim AS client
 WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm ci
-COPY angular.json tsconfig.json tsconfig.app.json ./
+COPY angular.json tsconfig.json tsconfig.app.json .browserslistrc ./
 COPY src ./src
 RUN npm run build
 
