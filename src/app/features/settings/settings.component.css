@@ -1,0 +1,51 @@
+.settings__hint,
+.settings__empty {
+  max-width: 900px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.settings__toolbar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.settings__table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.settings__table th,
+.settings__table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.settings__key-column {
+  width: 260px;
+}
+
+.settings__action-column {
+  width: 160px;
+}
+
+.settings__key {
+  font-family: Consolas, 'Courier New', monospace;
+  white-space: nowrap;
+}
+
+.settings__value {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.settings__action {
+  white-space: nowrap;
+}

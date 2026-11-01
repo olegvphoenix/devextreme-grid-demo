@@ -1,0 +1,450 @@
+[
+  {
+    "id": "metrics",
+    "title": "Метрики на экране: первая отрисовка, сортировка и фильтрация, FPS при прокрутке",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/core/grid-metrics.service.ts",
+      "src/app/features/grid/metrics-panel.component.ts",
+      "src/app/features/grid/metrics-panel.component.html",
+      "src/app/features/grid/metrics-panel.component.css"
+    ],
+    "apis": [
+      "onContentReady",
+      "onOptionChanged (fullName columns[N].sortOrder)",
+      "getScrollable().element()",
+      "getDataSource().isLoading()",
+      "totalCount()",
+      "scrolling.useNative: true"
+    ],
+    "limitations": "Грид метрик не даёт: своя служба на performance.now() и requestAnimationFrame, точки — события грида. FPS считается, пока идут события scroll, для этого scrolling.useNative: true — имитированная прокрутка DevExtreme (по умолчанию на Windows) событий scroll не даёт. «Сортировка» в 2–4 раза больше ответа сервера: остальное — перерисовка 50 строк в двух таблицах и пейджера. Минимальный FPS показывает 3, если первая прокрутка приходит во время отрисовки страницы в 500 строк; после отрисовки минимум 49–51.",
+    "demoLink": "/grid#metrics"
+  },
+  {
+    "id": "pagination",
+    "title": "Пагинация с загрузкой только текущей страницы (серверная, мок API)",
+    "assessment": "штатно",
+    "locFiles": [
+      "src/app/features/grid/grid-store.ts",
+      "src/app/models/load-options.model.ts",
+      "server/MockServer/Api/RowsEndpoints.cs",
+      "server/MockServer/Api/LoadOptionsReader.cs"
+    ],
+    "apis": [
+      "remoteOperations.paging",
+      "CustomStore.load (skip, take, requireTotalCount)",
+      "paging.pageSize",
+      "pager (showPageSizeSelector, allowedPageSizes, showInfo)",
+      "DataSourceLoader.Load (DevExtreme.AspNet.Data 5.1.0, сервер)"
+    ],
+    "limitations": "Страница 50 строк из 1 000 000 — ответ сервера 2–17 мс, с сортировкой 37–132 мс; первая отрисовка 132–274 мс. DataSource.pageIndex(0) после смены набора — операция «только страница»: totalCount грид берёт из кэша и пейджер оставался на 20 страницах для миллиона строк, нужен refresh(). Загрузка без take (штатный экспорт, восстановление выбора по ключам) идёт одним ответом на весь набор — 327 МБ на 1 000 000.",
+    "demoLink": "/grid#pagination"
+  },
+  {
+    "id": "columns",
+    "title": "Колонки: закрепление, перемещение, изменение ширины",
+    "assessment": "штатно",
+    "locFiles": ["src/app/features/grid/grid-columns.ts"],
+    "apis": [
+      "columnFixing.enabled",
+      "allowColumnReordering",
+      "allowColumnResizing",
+      "columnResizingMode (nextColumn / widget)",
+      "Column.fixed, fixedPosition"
+    ],
+    "limitations": "Закреплённая колонка — вторая таблица на все строки: на странице в 500 строк ≈0,4 с отрисовки и 1–3 FPS (измерено на закреплённой колонке действий). Тип колонки для входа columns у devextreme-angular — DevExpress.ui.dxDataGridColumn из бандла, модульный Column из devextreme/ui/data_grid TypeScript 4.3 с ним не сравнивает (TS2321 «Excessive stack depth»). Ширины режима «По ширине страницы» (грид хранит их в процентах) при переходе в режим прокрутки и обратно не сохраняются.",
+    "demoLink": "/grid#columns"
+  },
+  {
+    "id": "width",
+    "title": "Заполнение всей ширины страницы колонками и переход в режим горизонтальной прокрутки",
+    "assessment": "с доработкой",
+    "locFiles": [],
+    "apis": [
+      "Column.width",
+      "columnResizingMode",
+      "state() / state(state)"
+    ],
+    "limitations": "Каждый режим сам по себе — конфигурация: без ширин колонки делят ширину грида, с ширинами появляется горизонтальная прокрутка. Переключение на лету — свой код: ширины снимаются с состояния грида и возвращаются через instance.state(...) (detachWidths / attachWidths, ключ dxgrid-demo:scroll-widths); переключение стоит один запрос страницы, потому что applyState заканчивается сбросом dataController.",
+    "demoLink": "/grid#columns"
+  },
+  {
+    "id": "chooser",
+    "title": "Форма для скрытия/отображения колонок",
+    "assessment": "штатно",
+    "locFiles": [],
+    "apis": [
+      "columnChooser.enabled",
+      "columnChooser.mode: 'select'",
+      "Column.showInColumnChooser"
+    ],
+    "limitations": "Служебные колонки (действия, скрытая labelsKey) убраны из списка через showInColumnChooser: false. Скрытая пользователем колонка сохраняется в состоянии и не попадает ни в экспорт, ни в копирование.",
+    "demoLink": "/grid#columns"
+  },
+  {
+    "id": "sorting",
+    "title": "Сортировка отдельно для каждой колонки",
+    "assessment": "штатно",
+    "locFiles": [],
+    "apis": [
+      "sorting.mode: 'multiple'",
+      "remoteOperations.sorting",
+      "Column.allowSorting",
+      "Column.customizeText"
+    ],
+    "limitations": "Статус сортируется по коду enum, а не по подписи: customizeText оставляет selector: 'status' в запросе, calculateDisplayValue увёл бы сортировку на клиент. Колонка ярлыков (массив) не сортируется и не группируется. Клик по подписи в своём шаблоне заголовка сортирует штатно, клик по иконке фильтра — нет (stopPropagation). На 1 000 000 строк: date desc 112–138 мс, две колонки 127–168 мс (сервер 34–56 мс).",
+    "demoLink": "/grid#sorting"
+  },
+  {
+    "id": "filter-list",
+    "title": "Фильтр по списку значений с множественным выбором (Excel-like) для всех колонок",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/shared/filters/column-filter-popup.component.ts",
+      "src/app/shared/filters/column-filter-popup.component.html",
+      "src/app/shared/filters/column-filter-popup.component.css",
+      "src/app/shared/filters/dependent-multi-checkbox-filter.component.ts",
+      "src/app/shared/filters/dependent-multi-checkbox-filter.component.html",
+      "src/app/shared/filters/dependent-multi-checkbox-filter.component.css",
+      "src/app/shared/filters/dx-editor-value.ts",
+      "src/app/features/grid/filter-chips.component.ts",
+      "src/app/features/grid/filter-chips.component.html",
+      "src/app/features/grid/filter-chips.component.css",
+      "src/app/models/column-filter.model.ts"
+    ],
+    "apis": [
+      "Column.headerCellTemplate",
+      "filterValue",
+      "Column.allowHeaderFiltering: false, headerFilter.visible: false",
+      "filterPanel.visible: false",
+      "dx-popup (position.of)",
+      "dx-check-box",
+      "dx-text-box (mode: 'search')"
+    ],
+    "limitations": "Штатный headerFilter не умеет показать диапазон в одном popup со списком, поэтому список — свой компонент в dx-popup по иконке в заголовке. У dxPopup в 23.2.15 нет target — позиция через position.of. dx-list на 5 000 элементах рисуется 12,7–12,9 с, «выбрать всё» 3,5 с — список своё окно из 10 строк dx-check-box (8–22 мс), без навигации по строкам с клавиатуры. Колонки с уникальными значениями (markingCode, id) на 1 000 000 строк приходят усечёнными до 5 000 (truncated): подпись «Показаны первые 5000, уточните поиском», «Выбрать всё» становится «Выбрать показанные (N)» и задаёт явные значения. filterPanel выключен: его filterBuilder меняет filterValue мимо состояния страницы и умеет операторы, которые сервер отвергает (between, anyof); вместо него свои чипы над гридом. Условие по ярлыкам идёт по служебному полю labelsKey — для него заведена скрытая колонка, иначе грид не принимает поле в filterValue (E1047).",
+    "demoLink": "/grid#filters"
+  },
+  {
+    "id": "filter-server",
+    "title": "Список значений получается с сервера",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "server/MockServer/Api/ColumnEndpoints.cs",
+      "src/app/models/distinct.model.ts"
+    ],
+    "apis": [
+      "DataSourceLoader.Load (применение фильтра на сервере)",
+      "формат условий DevExtreme в POST /api/distinct"
+    ],
+    "limitations": "Свой эндпоинт POST /api/distinct: фильтр применяется DataSourceLoader, затем GroupBy в памяти, take 5 000, поиск по тексту на сервере. На 1 000 000 строк: plant / status 24–164 мс, date (2 466 значений) 48–102 мс, markingCode (1 000 000 уникальных) 441–598 мс с усечением. Новый запрос списка отменяет предыдущий запрос своей группы.",
+    "demoLink": "/grid#filters"
+  },
+  {
+    "id": "filter-dependent",
+    "title": "Список значений колонки строится с учётом фильтров других колонок",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/shared/filters/filter-expression.ts",
+      "src/app/shared/filters/dependent-list.model.ts"
+    ],
+    "apis": [
+      "filterValue (формат условий DevExtreme)",
+      "DataSourceLoader.Load"
+    ],
+    "limitations": "Фильтр для списка собирается своим buildFilterExpression(state, excludeField): все остальные колонки плюс диапазон своей колонки из черновика popup. Выбранные значения, которых нет в перезагруженном списке, выбывают — только при полном, не усечённом ответе. Открытый popup перезагружает список при смене диапазона, устаревший ответ отбрасывается.",
+    "demoLink": "/grid#filters"
+  },
+  {
+    "id": "filter-number",
+    "title": "Для числовых колонок — диапазон (с / по) в том же popup, что и список",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/shared/filters/excel-numeric-filter.component.ts",
+      "src/app/shared/filters/excel-numeric-filter.component.html",
+      "src/app/shared/filters/numeric-range.model.ts",
+      "src/app/shared/filters/range.model.ts"
+    ],
+    "apis": [
+      "dx-number-box (min, max, format, showClearButton)",
+      "filterValue (>=, <=)"
+    ],
+    "limitations": "Оператор between отвергается DevExtreme.AspNet.Data 5.1.0 на IQueryable в памяти (500 «Specified method is not supported»): диапазон уходит как >= и <=. Границы «с / по» — свой запрос POST /api/stats под фильтром остальных колонок. Тип value у dx-number-box не допускает null, хотя reset() его даёт — нужен типизированный помощник dxEditorValue.",
+    "demoLink": "/grid#filters"
+  },
+  {
+    "id": "filter-date",
+    "title": "Для колонок дат — диапазон (с / по) в том же popup, что и список",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/shared/filters/date-range-filter.component.ts",
+      "src/app/shared/filters/date-range-filter.component.html",
+      "src/app/shared/filters/date-range.model.ts",
+      "src/app/shared/date-format.ts"
+    ],
+    "apis": [
+      "dx-date-box (type: 'date', displayFormat, dateSerializationFormat)",
+      "dateSerializationFormat: 'yyyy-MM-dd'",
+      "Column.calculateFilterExpression"
+    ],
+    "limitations": "Штатное выражение колонки даты ждёт Date или yyyy/MM/dd и разворачивает «=» в сутки; строки yyyy-MM-dd с сервера оно превращает в Invalid Date — у колонки своё calculateFilterExpression, условие уходит как есть. useMaskBehavior: true у dx-date-box со строковой сериализацией бросает «value.getTime is not a function» на blur — маска выключена, ввод dd.MM.yyyy свободный. Границы — POST /api/stats.",
+    "demoLink": "/grid#filters"
+  },
+  {
+    "id": "filter-display",
+    "title": "В фильтрах всех колонок (включая enum) показываются отображаемые значения",
+    "assessment": "с доработкой",
+    "locFiles": ["server/MockServer/Api/ValueFormatter.cs"],
+    "apis": ["Column.customizeText"],
+    "limitations": "Подписи даёт сервер (ValueFormatter: статус по-русски, дата dd.MM.yyyy, числа в формате ru) в поле text ответа /api/distinct, поиск идёт по тексту. Чипы над гридом берут текст из ответа списка (texts в состоянии фильтра); для значения, которого усечённый список не вернул, — само значение.",
+    "demoLink": "/grid#filters"
+  },
+  {
+    "id": "state",
+    "title": "Автосохранение всех пользовательских изменений в LocalStorage и восстановление при заходе и обновлении",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/features/grid/grid-state.ts",
+      "src/app/features/grid/grid-filter-state.service.ts",
+      "src/app/core/storage.service.ts"
+    ],
+    "apis": [
+      "stateStoring (type: 'custom', customLoad, customSave, savingTimeout: 0)",
+      "state() / state(state)",
+      "selectedRowKeys в состоянии"
+    ],
+    "limitations": "Состояние грида (колонки, сортировка, группировка, страница, размер, выбранные ключи) — штатное stateStoring; фильтры живут в своём состоянии страницы (dxgrid-demo:filters), customSave вырезает filterValue, customLoad подставляет его обратно — иначе applyState сбросил бы привязанный filterValue. Размер набора, режим ширины и режим выбора — свои ключи. Сброс при ngOnDestroy и beforeunload, savingTimeout: 0. Выбор больше 30 строк после перезагрузки не восстанавливается: фильтр по ключам длиннее 1 500 символов грид заменяет запросом всего набора (343 МБ на 1 000 000), selection.maxFilterLengthInRequest в .d.ts не вынесен. Скрытая колонка labelsKey попадает в сохранённое состояние.",
+    "demoLink": "/settings"
+  },
+  {
+    "id": "selection-modes",
+    "title": "Выбор строк: отключено, строка, несколько строк с чекбоксами, без чекбоксов, выбор ячеек",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/features/grid/cell-selection.ts",
+      "src/app/models/selection-mode.model.ts"
+    ],
+    "apis": [
+      "selection.mode (none / single / multiple)",
+      "selection.showCheckBoxesMode",
+      "selection.allowSelectAll, selectAllMode: 'page'",
+      "onCellClick, onCellPrepared",
+      "getRowElement(), clearSelection()"
+    ],
+    "limitations": "Четыре режима строк — конфигурация selection. Режима выделения ячеек в DataGrid 23.2 нет: свой код на onCellClick / onCellPrepared (класс на td, Ctrl — переключение, Shift — прямоугольник), выделение сбрасывается при смене страницы, сортировки, фильтра, группировки и набора; ячейка ярлыков не выделяется (клики уходят в редактор). «Выбрать всё» только на странице: selectAllMode: 'allPages' на 1 000 000 строк грузит весь набор без take — 343 МБ, 4,4 с, куча 852 МБ; deferred: true не помогает (getSelectedRowsData грузит те же строки). Выбор больше 30 строк после перезагрузки не восстанавливается. Подсветка прямоугольника 500 × 14 — 0,58 с.",
+    "demoLink": "/grid#selection"
+  },
+  {
+    "id": "clipboard",
+    "title": "Копирование выделения в буфер в формате для вставки в Excel",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/features/grid/clipboard-format.ts",
+      "src/app/features/grid/clipboard.service.ts"
+    ],
+    "apis": [
+      "getSelectedRowsData(), getSelectedRowKeys()",
+      "getVisibleColumns()",
+      "Column.calculateCellValue, format, customizeText",
+      "formatDate / formatNumber (devextreme/localization)"
+    ],
+    "limitations": "Копирования в буфер у DataGrid нет: своя сборка TSV (заголовки видимых колонок, отображаемые значения через конвейер колонки, экранирование по правилам Excel, CRLF), кнопка и Ctrl+C по физической клавише. Строки, выбранные на других страницах, грид держит в selectedItems — запрос не нужен; если данных части строк нет, копирование отказывается целиком. На HTTP (нет navigator.clipboard) — запасной путь через textarea и execCommand('copy'); textarea превращает CRLF в LF, поэтому текст ставится в clipboardData слушателем copy. Копия 500 × 14 — 18–34 мс; копия миллиона строк при allPages — 31,7 с без отклика вкладки.",
+    "demoLink": "/grid#selection"
+  },
+  {
+    "id": "template-badge",
+    "title": "Шаблон ячейки: бейдж статуса",
+    "assessment": "штатно",
+    "locFiles": ["src/app/features/grid/status-badge.component.ts"],
+    "apis": [
+      "Column.cellTemplate",
+      "*dxTemplate (devextreme-angular)",
+      "ColumnCellTemplateData.value"
+    ],
+    "limitations": "Шаблон — компонент Angular на ячейку. Цена: 1 000 экземпляров шаблонов на странице в 500 строк — ≈0,3 с отрисовки и 2–4 FPS при прокрутке. Ловушка devextreme-angular: DxTemplateDirective входит в зону на каждый шаблон; если грид перерисовывается вне зоны (вызов API грида из runOutsideAngular или консоли), после каждой ячейки идёт полный tick и те же 500 строк рисуются 19–22 с вместо 1,2 с.",
+    "demoLink": "/grid#templates"
+  },
+  {
+    "id": "template-actions",
+    "title": "Шаблон ячейки: кнопки действий",
+    "assessment": "штатно",
+    "locFiles": [],
+    "apis": [
+      "Column type: 'buttons'",
+      "ColumnButton (name, hint, icon, onClick)",
+      "Column.fixed, fixedPosition: 'right'",
+      "Column.allowExporting: false",
+      "notify"
+    ],
+    "limitations": "Колонка действий — конфигурация без шаблона. Закреплённая справа, она даёт вторую таблицу на все строки: ≈0,4 с на странице в 500 строк и 1–3 FPS; открепляется из контекстного меню заголовка. Кнопки данные не меняют — уведомление с id записи.",
+    "demoLink": "/grid#templates"
+  },
+  {
+    "id": "template-labels",
+    "title": "Шаблон ячейки: ярлыки с добавлением и удалением",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/features/grid/labels-cell.component.ts",
+      "src/app/features/grid/labels-cell.component.html",
+      "src/app/features/grid/labels-cell.component.css"
+    ],
+    "apis": [
+      "Column.cellTemplate",
+      "ColumnCellTemplateData.row.key",
+      "Store.push([{ type: 'update' }])",
+      "DataSource.on('changed') (e.changes)",
+      "Column.allowSorting / allowGrouping: false, dataType: 'object'"
+    ],
+    "limitations": "Чипы, поле ввода с подсказками (datalist из /api/distinct) и сохранение PUT /api/rows/{id}/labels — свой компонент; поле labels и эндпоинт — дополнение к набору данных задания. После сохранения строка обновляется через store.push без запроса страницы, выбор и страница остаются; labelsKey в кэшированной строке устаревает (клиент его не читает). Клики внутри ячейки не доходят до строки — в режиме ячеек эта ячейка не выделяется. Высота строки 49 px при 0–3 ярлыках.",
+    "demoLink": "/grid#templates"
+  },
+  {
+    "id": "loading",
+    "title": "Индикатор загрузки, обработка ошибки сервера, отмена устаревших запросов",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/core/data.service.ts",
+      "src/app/core/api-error.ts"
+    ],
+    "apis": [
+      "loadPanel.enabled",
+      "errorRowEnabled: false",
+      "CustomStore.load (promise)",
+      "DataSource.cancel (внутри грида)",
+      "refresh()"
+    ],
+    "limitations": "Индикатор — штатный loadPanel. Ошибку грид показывает своей строкой (errorRowEnabled); здесь своя полоска с текстом сервера и «Повторить», прежние строки остаются. Отмены HTTP у DataGrid нет: DataSource.cancel лишь отвергает свой deferred, запрос продолжает идти — отмена делается отпиской от HttpClient (браузер прерывает XHR), новый запрос отменяет прежний своей группы; при задержке 1,5 с и четырёх кликах «следующая страница» отменены 3 из 4. Promise отменённой загрузки надо завершить явно пустым ответом, иначе панель загрузки грида остаётся. Пробы take: 1 счётчика групп DataGrid шлёт параллельно — в одной группе отмены вторая обрывала первую и грид молча оставлял прежние строки; пробы и загрузка всех строк идут вне группы отмены.",
+    "demoLink": "/grid#loading"
+  },
+  {
+    "id": "grouping",
+    "title": "Серверная группировка с агрегатами",
+    "assessment": "штатно",
+    "locFiles": [],
+    "apis": [
+      "remoteOperations.grouping, groupPaging, summary",
+      "groupPanel, grouping.autoExpandAll: false",
+      "summary.groupItems / totalItems (count, sum, avg, alignByColumn)",
+      "DataSourceLoader.Load (group, groupSummary, totalSummary, requireGroupCount)"
+    ],
+    "limitations": "Группы и агрегаты считает сервер. На 1 000 000 строк: группировка по заводу с агрегатами 543–1 052 мс, три уровня 1 507–1 644 мс. Тип SummaryDescriptor требует selector, хотя грид шлёт { summaryType: 'count' } без него. При раскрытой группе на второй странице грид шлёт две параллельные пробы take: 1 (loadGroupTotalCount) — они должны идти вне группы отмены запросов. Сгруппированные колонки в экспорте идут первыми.",
+    "demoLink": "/grid#grouping"
+  },
+  {
+    "id": "export",
+    "title": "Экспорт в Excel и PDF текущего представления (колонки, сортировка, фильтры), все данные",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/features/grid/export-request.ts",
+      "src/app/features/grid/native-export.ts",
+      "server/MockServer/Api/ExportEndpoints.cs",
+      "server/MockServer/Api/HeavyRequestLimiter.cs",
+      "server/MockServer/Export/ExportRequest.cs",
+      "server/MockServer/Export/XlsxExporter.cs",
+      "server/MockServer/Export/PdfExporter.cs",
+      "server/MockServer/Export/DejaVuFontResolver.cs"
+    ],
+    "apis": [
+      "exportDataGrid (devextreme/excel_exporter + exceljs 4.3.0)",
+      "exportDataGrid (devextreme/pdf_exporter + jspdf 2.5.1)",
+      "state(), columnOption() — колонки, сортировка, группировка для запроса серверу",
+      "Column.allowExporting",
+      "confirm (devextreme/ui/dialog)"
+    ],
+    "limitations": "Штатный exportDataGrid при удалённых данных грузит весь набор в браузер одним запросом без take. Предел на этой машине: Excel — 100 000 строк за 8,2 с (ответ 34 МБ, куча 500 МБ, процесс 1,15 ГБ); PDF 100 000 строк не завершился за 10 минут, вкладка заморожена; на 1 000 000 строк оба штатных экспорта убивают процесс вкладки на 4,8–5,1 ГБ, файла нет. Поэтому экспорт всех данных — свой: сервер строит XLSX (MiniExcel, поток, 27 с на 1 000 000) и PDF (PDFsharp, 22 223 страницы, 41 с; документ собирается в памяти целиком, +1,2 ГБ, первый байт после сборки) по текущему виду — видимые колонки, сортировка, группировка, фильтр страницы; куча браузера 37–44 МБ, запрос можно отменить. Сгруппированные колонки в файле идут первыми — порядок колонок отличается от экрана. exportDataGrid на отклонённой загрузке не завершается никогда (панель «Экспорт…» остаётся) — отказ отдаётся ему пустым ответом, пустой файл не сохраняется. Штатный экспорт отменить нельзя. Штатный Excel пишет сырые значения с форматами, серверный — отображаемый текст.",
+    "demoLink": "/grid#export"
+  },
+  {
+    "id": "dataset",
+    "title": "Набор данных: генератор производственных записей и переключатель 1 000 / 100 000 / 1 000 000 строк",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/models/dataset.model.ts",
+      "src/app/models/production-record.model.ts",
+      "server/MockServer/Data/DataGenerator.cs",
+      "server/MockServer/Data/Catalog.cs",
+      "server/MockServer/Data/DatasetStore.cs",
+      "server/MockServer/Data/ProductionRecord.cs"
+    ],
+    "apis": [
+      "DataSource.pageIndex(0)",
+      "refresh()",
+      "dx-select-box"
+    ],
+    "limitations": "Генератор детерминированный (фиксированный seed), набор строится лениво при первом запросе размера: 1 000 000 строк — 734–762 мс, рабочий набор процесса сервера 1,4–1,6 ГБ. Переключение — свой select-box: DataService.dataset, pageIndex(0) и refresh() (без refresh грид берёт totalCount из кэша). Переключение на 1 000 000 на свежем сервере — 1 090 мс от клика до строк.",
+    "demoLink": "/grid#dataset"
+  },
+  {
+    "id": "settings",
+    "title": "Просмотр сохранённых настроек: ключи и значения LocalStorage приложения",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/features/settings/settings.component.ts",
+      "src/app/features/settings/settings.component.html",
+      "src/app/features/settings/settings.component.css"
+    ],
+    "apis": ["dx-button"],
+    "limitations": "Своя страница без DataGrid: ключи с префиксом dxgrid-demo:, значения как есть (JSON с отступами), «Обновить», «Удалить ключ», «Очистить всё». В dxgrid-demo:state видна скрытая колонка labelsKey — так её сохраняет грид.",
+    "demoLink": "/settings"
+  },
+  {
+    "id": "about",
+    "title": "О программе и раздел «Итоги» с баллом",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/features/about/about.component.ts",
+      "src/app/features/about/about.component.html",
+      "src/app/features/about/about.component.css",
+      "src/app/features/about/score.ts",
+      "src/app/features/about/requirements.ts",
+      "src/app/models/requirement.model.ts",
+      "scripts/count-loc.js"
+    ],
+    "apis": [],
+    "limitations": "Своя страница: версии из package.json, таблица требований из requirements.json, строки своего кода считает scripts/count-loc.js (npm run loc) по выделенным файлам — без тестов и без обвязки страницы грида. Колонка «Использованные API Kendo» из задания названа «Использованные API DevExtreme». XPO не использован.",
+    "demoLink": "/about"
+  },
+  {
+    "id": "extra-labels",
+    "title": "Поле labels и PUT /api/rows/{id}/labels",
+    "assessment": "с доработкой",
+    "locFiles": [],
+    "apis": ["Store.push"],
+    "limitations": "Дополнение к набору данных задания ради шаблона «Ярлыки»: оверлей в памяти сервера, фильтр по служебному полю labelsKey (contains). На балл не влияет.",
+    "demoLink": "/grid#templates",
+    "extra": true
+  },
+  {
+    "id": "extra-demo-headers",
+    "title": "Заголовки X-Demo-Delay и X-Demo-Fail",
+    "assessment": "с доработкой",
+    "locFiles": [
+      "src/app/core/demo-flags.service.ts",
+      "src/app/core/demo-headers.interceptor.ts",
+      "server/MockServer/Api/DemoHeadersMiddleware.cs"
+    ],
+    "apis": [],
+    "limitations": "Переключатели «Задержка ответа» и «Ошибка сервера» выставляют заголовки через HTTP-перехватчик; сервер задерживает ответ или отвечает 500 с текстом. На балл не влияет.",
+    "demoLink": "/grid#loading",
+    "extra": true
+  },
+  {
+    "id": "extra-generate",
+    "title": "npm run generate — выгрузка набора в CSV",
+    "assessment": "с доработкой",
+    "locFiles": ["server/MockServer/Data/CsvWriter.cs"],
+    "apis": [],
+    "limitations": "Тот же генератор отдельной командой: npm run generate -- <размер> <файл.csv>. На балл не влияет.",
+    "demoLink": "",
+    "extra": true
+  },
+  {
+    "id": "extra-docker",
+    "title": "Docker и публикация на внешнем хосте",
+    "assessment": "с доработкой",
+    "locFiles": [],
+    "apis": [],
+    "limitations": "Сборка контейнера и размещение демо — вне DevExtreme. На балл не влияет.",
+    "demoLink": "",
+    "extra": true
+  }
+]

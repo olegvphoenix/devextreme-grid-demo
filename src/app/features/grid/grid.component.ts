@@ -1,10 +1,12 @@
 import {
+  AfterViewInit,
   Component,
   HostListener,
   OnDestroy,
   OnInit,
   ViewChild,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { DxDataGridComponent } from 'devextreme-angular/ui/data-grid';
 import {
   ColumnChooser,
@@ -51,6 +53,7 @@ import { DATASET_SIZES, DatasetSize } from '../../models/dataset.model';
 import { ProductionRecord } from '../../models/production-record.model';
 import { SelectionMode } from '../../models/selection-mode.model';
 import { DATE_SERIALIZATION_FORMAT } from '../../shared/date-format';
+import { scrollToAnchor } from '../../shared/scroll-to-anchor';
 import {
   ColumnFilterApply,
   FilterColumn,
@@ -153,7 +156,7 @@ interface SelectionModeItem {
   templateUrl: './grid.component.html',
   styleUrls: ['./grid.component.css'],
 })
-export class GridComponent implements OnInit, OnDestroy {
+export class GridComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(DxDataGridComponent) grid?: DxDataGridComponent;
 
   readonly datasetSizes: DatasetSize[] = DATASET_SIZES;
@@ -234,6 +237,7 @@ export class GridComponent implements OnInit, OnDestroy {
 
   private readonly store: CustomStore<ProductionRecord, number>;
   private readonly filterSubscription: Subscription;
+  private fragmentSubscription: Subscription | null = null;
   private stopFps: (() => void) | null = null;
   private resetting = false;
   private exportSubscription: Subscription | null = null;
@@ -246,7 +250,8 @@ export class GridComponent implements OnInit, OnDestroy {
     private readonly flags: DemoFlagsService,
     private readonly metrics: GridMetricsService,
     private readonly filters: GridFilterStateService,
-    private readonly clipboard: ClipboardService
+    private readonly clipboard: ClipboardService,
+    private readonly route: ActivatedRoute
   ) {
     this.metrics.markStart('first-render');
     this.settings = readPageSettings(this.storage);
@@ -314,9 +319,17 @@ export class GridComponent implements OnInit, OnDestroy {
     ];
   }
 
+  /** Ссылки «Итогов» ведут на якоря разделов страницы: `/grid#export`. */
+  ngAfterViewInit(): void {
+    this.fragmentSubscription = this.route.fragment.subscribe((fragment) =>
+      scrollToAnchor(fragment)
+    );
+  }
+
   ngOnDestroy(): void {
     this.flushState();
     this.filterSubscription.unsubscribe();
+    this.fragmentSubscription?.unsubscribe();
     this.exportSubscription?.unsubscribe();
     this.stopFps?.();
     this.dataSource.dispose();

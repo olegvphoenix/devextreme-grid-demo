@@ -9,6 +9,7 @@
     "watch": "cross-env NODE_OPTIONS=--openssl-legacy-provider ng build --watch --configuration development",
     "test": "cross-env NODE_OPTIONS=--openssl-legacy-provider ng test --watch=false --browsers=ChromeHeadlessNoSandbox",
     "mock": "dotnet run --project server/MockServer",
+    "loc": "node scripts/count-loc.js",
     "generate": "dotnet run --project server/MockServer -- generate"
   },
   "dependencies": {

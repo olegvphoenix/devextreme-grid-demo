@@ -1,0 +1,218 @@
+<h1>О программе</h1>
+
+<section class="about__section">
+  <p class="about__text">
+    Демонстрация возможностей <strong>DevExtreme DataGrid</strong> (DevExtreme
+    UI for Angular) по списку требований: серверная пагинация, сортировка
+    и фильтрация, Excel-подобные фильтры с диапазонами, сохранение состояния,
+    режимы выбора и копирование в Excel, шаблоны ячеек, серверная
+    группировка с агрегатами, экспорт всех данных в Excel и PDF. Для каждого
+    требования в разделе «Итоги» сказано, закрывает ли его DevExtreme
+    штатно (конфигурацией), с доработкой (своим кодом) или не закрывает.
+  </p>
+  <p class="about__text">
+    Данные — производственные записи детерминированного генератора на мок-сервере
+    (ASP.NET Core, .NET 8); набор 1 000, 100 000 или 1 000 000 строк
+    переключается на основной странице. Запросы грида на сервере выполняет
+    <code>DataSourceLoader</code> из DevExtreme.AspNet.Data по
+    <code>IQueryable</code> в памяти; экспорт строят MiniExcel и PDFsharp
+    (версии — в <code>server/MockServer/MockServer.csproj</code>).
+  </p>
+  <p class="about__text" data-testid="about-xpo">
+    <strong>XPO не использован:</strong> он требует базу данных и пакет
+    DevExpress.Xpo, а <code>DataSourceLoader</code> работает с любым
+    <code>IQueryable</code> — XPO подключился бы позже через
+    <code>XPQuery&lt;T&gt;</code> без изменения контракта API. В задании XPO
+    «если необходимо» — здесь не необходимо.
+  </p>
+</section>
+
+<section class="about__section">
+  <h2>Версии</h2>
+  <p class="about__text">
+    Из <code>package.json</code>, точные версии без диапазонов. Angular 12
+    ограничивает DevExtreme версией 23.2 (24.1 требует Angular 16).
+  </p>
+  <div class="about__versions">
+    <div>
+      <h3>Зависимости</h3>
+      <ul class="about__list" data-testid="about-dependencies">
+        <li *ngFor="let p of dependencies" data-testid="about-version">
+          {{ p.name }} {{ p.version }}
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>Сборка и тесты</h3>
+      <ul class="about__list">
+        <li *ngFor="let p of devDependencies" data-testid="about-version">
+          {{ p.name }} {{ p.version }}
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="about__section">
+  <h2>Ловушки версии 23.2.15 на Angular 12</h2>
+  <ul class="about__list about__list--wide" data-testid="about-traps">
+    <li>
+      <code>BrowserTransferStateModule</code> обязателен в
+      <code>AppModule</code>: каждый компонент devextreme-angular 23.2
+      инжектирует <code>TransferState</code>, которого Angular 12 сам не даёт —
+      сборка зелёная, в рантайме <code>NullInjectorError</code>.
+    </li>
+    <li>
+      Лицензия: ключ задаётся <code>config(&#123; licenseKey &#125;)</code> до первого
+      компонента; без ключа — только предупреждение W0019 в консоли, баннера и
+      водяного знака нет, работа не блокируется. Коммерческое использование
+      всё равно требует лицензии. Ключ в репозиторий не коммитится.
+    </li>
+    <li>
+      <code>DxTemplateDirective</code> входит в зону Angular на каждый шаблон:
+      перерисовка грида вне зоны (API грида из <code>runOutsideAngular</code>
+      или консоли) превращает страницу в 500 строк с шаблонами из 1,2 с
+      в 19–22 с.
+    </li>
+    <li>
+      <code>DataSource.cancel</code> не прерывает HTTP-запрос; отмена
+      устаревших запросов — отписка от <code>HttpClient</code> в своём коде, и
+      promise отменённой загрузки надо завершить явно, иначе панель загрузки
+      грида остаётся.
+    </li>
+  </ul>
+</section>
+
+<section class="about__section">
+  <h2>Как пользоваться</h2>
+  <ol class="about__list about__list--wide">
+    <li>
+      Запустите мок-сервер (<code>npm run mock</code>) и приложение
+      (<code>npm start</code>), откройте
+      <a routerLink="/grid">основную страницу</a>.
+    </li>
+    <li>
+      Выберите размер набора («Строк в наборе»); на 1 000 000 строк первый
+      запрос генерирует набор, около секунды.
+    </li>
+    <li>
+      Фильтр колонки — иконка воронки в заголовке: список значений с поиском,
+      для чисел и дат ещё поля «с / по» в том же окне. Снятые фильтры — чипы
+      над гридом.
+    </li>
+    <li>
+      Режим выбора — в панели «Выбор»; копирование — кнопка «Копировать» или
+      Ctrl+C, вставляется в Excel таблицей.
+    </li>
+    <li>
+      Экспорт: «Excel (сервер)» и «PDF (сервер)» выгружают все строки под
+      фильтром; «штатно» — <code>exportDataGrid</code> для сравнения, его
+      пределы — в «Итогах».
+    </li>
+    <li>
+      Все изменения сохраняются в LocalStorage и видны на странице
+      <a routerLink="/settings">«Сохранённые настройки»</a>; «Сбросить
+      настройки» на основной странице очищает их.
+    </li>
+  </ol>
+</section>
+
+<section class="about__section" id="summary">
+  <h2>Итоги</h2>
+  <p class="about__text">
+    По каждому требованию задания: оценка покрытия DevExtreme, строк своего
+    кода, использованные API, ограничения и баги, ссылка на раздел демо.
+    Оценка ставится по факту работы в браузере и замерам
+    (<code>docs/measurements.md</code>), а не по ожиданиям: всё, что
+    потребовало своего кода сверх конфигурации, — «с доработкой».
+  </p>
+  <p class="about__text about__note" data-testid="summary-kendo-note">
+    В задании колонка называется «Использованные API Kendo» — остаток шаблона
+    другого вендора; здесь она называется «Использованные API DevExtreme».
+    Строки кода посчитаны <code>scripts/count-loc.js</code> по выделенным
+    файлам без пустых строк и комментариев; тесты и обвязка страницы грида
+    (<code>grid.component.*</code>, {{ sharedLoc }} строк, обслуживает все
+    требования) не разнесены по требованиям. Строки «дополнение» — сверх
+    задания, в балл не входят.
+  </p>
+
+  <table class="summary" data-testid="summary-table">
+    <thead>
+      <tr>
+        <th class="summary__col-title">Требование</th>
+        <th class="summary__col-assessment">
+          Оценка: штатно / с доработкой / не реализуется
+        </th>
+        <th class="summary__col-loc">Строк своего кода (примерно)</th>
+        <th class="summary__col-apis">Использованные API DevExtreme</th>
+        <th class="summary__col-limitations">Ограничения и баги</th>
+        <th class="summary__col-link">Ссылка на раздел демо</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let row of rows; trackBy: trackById"
+        [class.summary__row--extra]="row.requirement.extra"
+        [attr.data-testid]="'summary-row-' + row.requirement.id"
+      >
+        <td>{{ row.requirement.title }}</td>
+        <td>
+          <span
+            *ngIf="!row.requirement.extra"
+            class="summary__assessment"
+            [class.summary__assessment--stock]="
+              row.requirement.assessment === 'штатно'
+            "
+            [class.summary__assessment--partial]="
+              row.requirement.assessment === 'с доработкой'
+            "
+            [class.summary__assessment--none]="
+              row.requirement.assessment === 'не реализуется'
+            "
+            >{{ row.requirement.assessment }}</span
+          >
+          <span
+            *ngIf="row.requirement.extra"
+            class="summary__assessment summary__assessment--extra"
+            data-testid="summary-extra"
+            >дополнение, вне балла</span
+          >
+        </td>
+        <td class="summary__loc" [title]="row.locDetails">
+          {{ row.loc === null ? '—' : row.loc }}
+        </td>
+        <td>
+          <ul *ngIf="row.requirement.apis.length > 0" class="summary__apis">
+            <li *ngFor="let api of row.requirement.apis">
+              <code>{{ api }}</code>
+            </li>
+          </ul>
+          <span *ngIf="row.requirement.apis.length === 0">—</span>
+        </td>
+        <td class="summary__limitations">{{ row.requirement.limitations }}</td>
+        <td>
+          <a
+            *ngIf="row.demoPath !== null"
+            [routerLink]="row.demoPath"
+            [fragment]="row.demoFragment ?? undefined"
+            [attr.data-testid]="'summary-demo-link-' + row.requirement.id"
+            >{{ row.requirement.demoLink }}</a
+          >
+          <span *ngIf="row.demoPath === null">—</span>
+        </td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6" class="summary__total" data-testid="summary-score">
+          <strong>Балл: {{ total.score }} из {{ total.max }}</strong> —
+          шкала матрицы: штатно = «да» = 2, с доработкой = «частично» = 1,
+          не реализуется = «нет» = 0; требований в зачёте
+          {{ total.max / 2 }}: штатно {{ counts.stock }},
+          с доработкой {{ counts.partial }}, не реализуется {{ counts.none }}.
+          Дополнения сверх задания в балл не входят.
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</section>

@@ -1,7 +1,7 @@
 <h1>Основная страница</h1>
 
 <section class="grid-page__toolbar" data-testid="grid-toolbar">
-  <div class="grid-page__group">
+  <div class="grid-page__group" id="dataset">
     <span class="grid-page__label">Строк в наборе</span>
     <dx-select-box
       data-testid="dataset-size"
@@ -45,7 +45,7 @@
       (onClick)="onCopy()"
     ></dx-button>
   </div>
-  <div class="grid-page__group">
+  <div class="grid-page__group" id="loading">
     <dx-check-box
       data-testid="demo-delay"
       text="Задержка ответа"
@@ -148,6 +148,7 @@
   ></dx-button>
 </div>
 
+<span id="sorting" class="grid-page__anchor"></span>
 <span id="templates" class="grid-page__anchor"></span>
 <span id="grouping" class="grid-page__anchor"></span>
 
