@@ -30,7 +30,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new DateJsonConverter()));
 builder.Services.AddSingleton(new DatasetStore(DateOnly.FromDateTime(DateTime.Now)));
 builder.Services.AddSingleton(new HeavyRequestLimiter(maxConcurrent: 2));
-builder.Services.AddRateLimiter(ColumnEndpoints.ConfigureLimiter);
+var columnLimiter = new ColumnRequestLimiter();
+builder.Services.AddSingleton(columnLimiter);
+builder.Services.AddRateLimiter(options => ColumnEndpoints.ConfigureLimiter(options, columnLimiter));
 
 var app = builder.Build();
 
@@ -47,13 +49,13 @@ app.UseExceptionHandler(errors => errors.Run(async context =>
     var message = error switch
     {
         BadHttpRequestException or JsonException => error.Message,
-        InvalidDataException => RequestLimits.TooLargeMessage,
+        InvalidDataException => RequestLimits.BadFormMessage,
         _ => "Внутренняя ошибка сервера",
     };
     await context.Response.WriteAsJsonAsync(new { message });
 }));
-app.UseRateLimiter();
 app.UseMiddleware<DemoHeadersMiddleware>();
+app.UseRateLimiter();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 

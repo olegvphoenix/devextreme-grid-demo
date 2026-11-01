@@ -18,9 +18,6 @@ public static class ColumnEndpoints
     private const int MaxTake = 5000;
     private const int DefaultTake = MaxTake;
     private const string LimiterPolicy = "columns";
-    /// <summary>Каждый запрос — проход по набору; окно фильтра открывает их по одному-два.</summary>
-    private const int ConcurrentRequests = 8;
-    private const int QueuedRequests = 32;
 
     public static void MapColumns(this IEndpointRouteBuilder app)
     {
@@ -28,15 +25,10 @@ public static class ColumnEndpoints
         app.MapPost("/api/stats", Stats).RequireRateLimiting(LimiterPolicy);
     }
 
-    /// <summary>Общий на процесс предел одновременных запросов к колонкам; лишние получают 429 с тем же JSON, что и прочие ошибки.</summary>
-    public static void ConfigureLimiter(RateLimiterOptions options)
+    /// <summary>Политика поверх <see cref="ColumnRequestLimiter"/>; лишние запросы получают 429 с тем же JSON, что и прочие ошибки.</summary>
+    public static void ConfigureLimiter(RateLimiterOptions options, ColumnRequestLimiter limiter)
     {
-        options.AddConcurrencyLimiter(LimiterPolicy, limiter =>
-        {
-            limiter.PermitLimit = ConcurrentRequests;
-            limiter.QueueLimit = QueuedRequests;
-            limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        });
+        options.AddPolicy(LimiterPolicy, _ => RateLimitPartition.Get(LimiterPolicy, _ => limiter.Limiter));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         options.OnRejected = (context, cancellationToken) =>
             new ValueTask(context.HttpContext.Response.WriteAsJsonAsync(new { message = BusyMessage }, cancellationToken));
