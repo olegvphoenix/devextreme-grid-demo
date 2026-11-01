@@ -30,8 +30,9 @@
 
 Что ещё показал прогон:
 
-* Оператор `between` отвергается `DevExtreme.AspNet.Data 5.1.0` на `IQueryable` в памяти: `500 {"message":"Specified
-  method is not supported."}`. Клиент собирает диапазон из `>=`/`<=` и `between` не отправляет.
+* Оператор `between` отвергается `DevExtreme.AspNet.Data 5.1.0` на `IQueryable` в памяти: `500` (на момент замера с
+  текстом `Specified method is not supported.`; теперь текст исключения остаётся в логе сервера, клиент получает
+  «Внутренняя ошибка сервера»). Клиент собирает диапазон из `>=`/`<=` и `between` не отправляет.
 * Повреждённый JSON в `sort`/`filter`/`group` — `400` с текстом ошибки парсера.
 
 ## Сервер: `POST /api/distinct` и `POST /api/stats` на наборе 1 000 000 строк
