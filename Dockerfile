@@ -16,5 +16,6 @@ WORKDIR /app
 COPY --from=server /app ./
 COPY --from=client /src/dist/devextreme-grid-demo ./wwwroot
 ENV DOTNET_gcServer=0
+USER app
 EXPOSE 5080
 ENTRYPOINT ["dotnet", "MockServer.dll", "--urls", "http://0.0.0.0:5080"]

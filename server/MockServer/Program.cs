@@ -20,7 +20,11 @@ if (args.Length > 0 && args[0] == "generate")
 }
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = RequestLimits.BodyBytes);
+builder.WebHost.ConfigureKestrel(kestrel =>
+{
+    kestrel.Limits.MaxRequestBodySize = RequestLimits.BodyBytes;
+    kestrel.AddServerHeader = false;
+});
 builder.Services.Configure<FormOptions>(options => options.ValueLengthLimit = RequestLimits.FormValueBytes);
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new DateJsonConverter()));
@@ -30,6 +34,7 @@ builder.Services.AddRateLimiter(ColumnEndpoints.ConfigureLimiter);
 
 var app = builder.Build();
 
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler(errors => errors.Run(async context =>
 {
     var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
